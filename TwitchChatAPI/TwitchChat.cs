@@ -16,7 +16,7 @@ internal static class TwitchChat
     public const int ServerPort = 6667;
 
     public static bool Enabled => Plugin.ConfigManager.TwitchChat_Enabled.Value;
-    public static string Channel => $"#{Plugin.ConfigManager.TwitchChat_Channel.Value}".Trim().Replace(" ", "_");
+    public static string Channel => $"#{Plugin.ConfigManager.TwitchChat_Channel.Value}".Trim();
 
     private static TcpClient _client;
     private static NetworkStream _stream;
@@ -27,6 +27,8 @@ internal static class TwitchChat
     private static ConnectionState _connectionState = ConnectionState.None;
     private static bool _isReconnecting;
     private static int _reconnectDelay = 5000; // 5 seconds
+
+    private static readonly object _lock = new object();
 
     public static void Connect()
     {
@@ -103,41 +105,53 @@ internal static class TwitchChat
 
     public static void Disconnect()
     {
-        if (_connectionState != ConnectionState.Connected && _connectionState != ConnectionState.Connecting)
+        lock (_lock)
         {
-            Plugin.Logger.LogInfo("Twitch chat is not connected or already disconnecting.");
-            return;
+            if (_connectionState != ConnectionState.Connected && _connectionState != ConnectionState.Connecting)
+            {
+                Plugin.Logger.LogInfo("Twitch chat is not connected or already disconnecting.");
+                return;
+            }
+
+            _connectionState = ConnectionState.Disconnecting;
+
+            _cts?.Cancel();
+
+            try
+            {
+                _writer?.Dispose();
+                _reader?.Dispose();
+                _stream?.Dispose();
+                _client?.Close();
+            }
+            finally
+            {
+                _writer = null;
+                _reader = null;
+                _stream = null;
+                _client = null;
+
+                Plugin.Logger.LogInfo("Twitch chat connection stopped.");
+            }
+
+            API.InvokeOnDisconnect();
         }
-
-        _connectionState = ConnectionState.Disconnecting;
-
-        // Cancel ongoing connection attempt (if any)
-        _cts?.Cancel();
-
-        // Close the connection
-        _client?.Close();
-        _reader?.Close();
-        _writer?.Close();
-        _stream?.Close();
-
-        Plugin.Logger.LogInfo("Twitch chat connection stopped.");
-
-        API.InvokeOnDisconnect();
     }
 
     private static async Task ListenAsync()
     {
         try
         {
-            while (_cts != null && !_cts.Token.IsCancellationRequested && !_reader.EndOfStream)
+            while (_cts != null && !_cts.Token.IsCancellationRequested)
             {
+                if (_reader == null) break; // Ensure the reader is not null
+
                 string message = await _reader.ReadLineAsync();
                 if (message == null) continue;
 
                 if (message.StartsWith("PING"))
                 {
-                    await _writer.WriteLineAsync("PONG :tmi.twitch.tv");
-
+                    await _writer?.WriteLineAsync("PONG :tmi.twitch.tv");
                     Plugin.Instance.LogInfoExtended("Received PING, sending PONG...");
                 }
                 else
@@ -148,11 +162,8 @@ internal static class TwitchChat
         }
         catch (TaskCanceledException)
         {
-            // Task was canceled
-            if (!_isReconnecting)
-            {
-                Plugin.Logger.LogError($"Twitch chat listen task canceled.");
-            }
+            // Expected during shutdown
+            Plugin.Logger.LogInfo("Twitch chat listen task canceled.");
         }
         catch (System.Exception ex)
         {
@@ -163,7 +174,10 @@ internal static class TwitchChat
         }
         finally
         {
-            _connectionState = ConnectionState.Disconnected;
+            lock (_lock)
+            {
+                _connectionState = ConnectionState.Disconnected;
+            }
         }
     }
 
@@ -199,18 +213,29 @@ internal static class TwitchChat
         try
         {
             string tagsSection = message.Split(' ')[0].Substring(1); // Remove leading '@'
-
             var tags = tagsSection.Split(';').ToDictionary(
                 tag => tag.Split('=')[0],
-                tag => tag.Contains('=') ? tag.Split('=')[1] : ""
+                tag => tag.Contains('=') ? tag[(tag.IndexOf('=') + 1)..] : string.Empty
             );
 
             string contentSection = message.Split("PRIVMSG")[1];
-            string[] contentParts = contentSection.Split(':');
-            string channel = contentParts[0].Trim().TrimStart('#');
-            string chatMessage = contentParts.Length > 1 ? contentParts[1].Trim() : string.Empty;
+            string channel = contentSection.Split(' ', System.StringSplitOptions.RemoveEmptyEntries)[0].Trim().TrimStart('#');
+            string chatMessage = string.Empty;
+
+            int indexOfColon = contentSection.IndexOf(':');
+            if (indexOfColon != -1)
+            {
+                chatMessage = contentSection[(indexOfColon + 1)..].Trim(); // Extract chat message
+            }
 
             TwitchUser twitchUser = GetTwitchUser(channel, tags);
+            if (twitchUser.Equals(default)) return;
+
+            if (tags.ContainsKey("bits"))
+            {
+                ProcessMessage_PRIVMSG_Cheer(message, channel, twitchUser, chatMessage, tags);
+                return;
+            }
 
             var twitchMessage = new TwitchMessage
             {
@@ -220,9 +245,33 @@ internal static class TwitchChat
                 Tags = tags // Retain raw tags for extensibility
             };
 
-            Plugin.Instance.LogInfoExtended($"\n{JsonConvert.SerializeObject(twitchMessage, Formatting.Indented)}");
+            //Plugin.Instance.LogInfoExtended($"\n{JsonConvert.SerializeObject(twitchMessage, Formatting.Indented)}");
 
             API.InvokeOnMessage(twitchMessage);
+        }
+        catch (System.Exception ex)
+        {
+            Plugin.Logger.LogError($"Failed to process PRIVMSG message:\n\n{message}\n\nError: {ex}");
+        }
+    }
+
+    private static void ProcessMessage_PRIVMSG_Cheer(string message, string channel, TwitchUser twitchUser, string chatMessage, Dictionary<string, string> tags)
+    {
+        try
+        {
+            var cheerEvent = new TwitchCheerEvent
+            {
+                Channel = channel,
+                User = twitchUser,
+                Message = chatMessage,
+                Tags = tags,
+                CheerAmount = int.Parse(tags.GetValueOrDefault("bits", "0"))
+            };
+
+            Plugin.Instance.LogInfoExtended($"RAW cheer message: {message}");
+            Plugin.Instance.LogInfoExtended($"[!] Cheer event: {cheerEvent.User.DisplayName} cheered {cheerEvent.CheerAmount} bits!\n{JsonConvert.SerializeObject(cheerEvent, Formatting.Indented)}");
+
+            API.InvokeOnCheer(cheerEvent);
         }
         catch (System.Exception ex)
         {
@@ -235,10 +284,9 @@ internal static class TwitchChat
         try
         {
             string tagsSection = message.Split(' ')[0].Substring(1); // Remove leading '@'
-
             var tags = tagsSection.Split(';').ToDictionary(
                 tag => tag.Split('=')[0],
-                tag => tag.Contains('=') ? tag.Split('=')[1] : ""
+                tag => tag.Contains('=') ? tag[(tag.IndexOf('=') + 1)..] : string.Empty
             );
 
             string msgId = tags.GetValueOrDefault("msg-id", defaultValue: string.Empty);
@@ -250,9 +298,14 @@ internal static class TwitchChat
             }
 
             string contentSection = message.Split("USERNOTICE")[1];
-            string[] contentParts = contentSection.Split(':');
-            string channel = contentParts[0].Trim().TrimStart('#');
-            string chatMessage = contentParts.Length > 1 ? contentParts[1].Trim() : string.Empty;
+            string channel = contentSection.Split(' ', System.StringSplitOptions.RemoveEmptyEntries)[0].Trim().TrimStart('#');
+            string chatMessage = string.Empty;
+
+            int indexOfColon = contentSection.IndexOf(':');
+            if (indexOfColon != -1)
+            {
+                chatMessage = contentSection[(indexOfColon + 1)..].Trim(); // Extract chat message
+            }
 
             TwitchUser twitchUser = GetTwitchUser(channel, tags);
             if (twitchUser.Equals(default)) return;
@@ -261,15 +314,13 @@ internal static class TwitchChat
             {
                 ProcessMessage_USERNOTICE_Sub(message, channel, twitchUser, chatMessage, tags);
             }
-
-            if (msgId == "raid")
+            else if (msgId == "raid")
             {
-                ProcessMessage_USERNOTICE_Cheer(message, channel, twitchUser, chatMessage, tags);
+                ProcessMessage_USERNOTICE_Raid(message, channel, twitchUser, tags);
             }
-
-            if (msgId == "cheer")
+            else
             {
-                ProcessMessage_USERNOTICE_Raid(message, channel, twitchUser, chatMessage, tags);
+                Plugin.Instance.LogInfoExtended($"Unhandled USERNOTICE message: {message}");
             }
         }
         catch (System.Exception ex)
@@ -347,31 +398,7 @@ internal static class TwitchChat
         }
     }
 
-    private static void ProcessMessage_USERNOTICE_Cheer(string message, string channel, TwitchUser twitchUser, string chatMessage, Dictionary<string, string> tags)
-    {
-        try
-        {
-            var cheerEvent = new TwitchCheerEvent
-            {
-                Channel = channel,
-                User = twitchUser,
-                Message = chatMessage,
-                Tags = tags,
-                CheerAmount = int.Parse(tags.GetValueOrDefault("msg-param-currency", defaultValue: "0")),
-            };
-
-            Plugin.Instance.LogInfoExtended($"RAW cheer message: {message}");
-            Plugin.Instance.LogInfoExtended($"[!] Cheer event: {cheerEvent.User.DisplayName} cheered {cheerEvent.CheerAmount} bits!\n{JsonConvert.SerializeObject(cheerEvent, Formatting.Indented)}");
-
-            API.InvokeOnCheer(cheerEvent);
-        }
-        catch (System.Exception ex)
-        {
-            Plugin.Logger.LogError($"Failed to process USERNOTICE message:\n\n{message}\n\nError: {ex}");
-        }
-    }
-
-    private static void ProcessMessage_USERNOTICE_Raid(string message, string channel, TwitchUser twitchUser, string chatMessage, Dictionary<string, string> tags)
+    private static void ProcessMessage_USERNOTICE_Raid(string message, string channel, TwitchUser twitchUser, Dictionary<string, string> tags)
     {
         try
         {
@@ -379,9 +406,9 @@ internal static class TwitchChat
             {
                 Channel = channel,
                 User = twitchUser,
-                Message = chatMessage,
+                Message = string.Empty,
                 Tags = tags,
-                ViewerCount = int.Parse(tags.GetValueOrDefault("msg-param-viewerCount", defaultValue: "0"))
+                ViewerCount = int.Parse(tags.GetValueOrDefault("msg-param-viewerCount", "0"))
             };
 
             Plugin.Instance.LogInfoExtended($"RAW raid message: {message}");
@@ -399,15 +426,12 @@ internal static class TwitchChat
     {
         try
         {
-            // Parse metadata tags
             string tagsSection = message.Split(' ')[0].Substring(1); // Remove leading '@'
-
             var tags = tagsSection.Split(';').ToDictionary(
                 tag => tag.Split('=')[0],
                 tag => tag.Contains('=') ? tag.Split('=')[1] : ""
             );
 
-            // Extract channel
             string channel = message.Split("ROOMSTATE")[1].Trim().TrimStart('#');
 
             var roomState = new TwitchRoomState
@@ -421,7 +445,7 @@ internal static class TwitchChat
             };
 
             Plugin.Instance.LogInfoExtended($"RAW roomstate message: {message}");
-            Plugin.Instance.LogInfoExtended($"Room state change detected: \n{JsonConvert.SerializeObject(roomState, Formatting.Indented)}");
+            Plugin.Instance.LogInfoExtended($"[!] Room state change detected: \n{JsonConvert.SerializeObject(roomState, Formatting.Indented)}");
 
             API.InvokeOnRoomStateUpdate(roomState);
         }
@@ -435,12 +459,14 @@ internal static class TwitchChat
     {
         try
         {
-            string displayName = tags.GetValueOrDefault("display-name", defaultValue: "Anonymous");
+            string displayName = tags.GetValueOrDefault("display-name", "Anonymous");
 
             return new TwitchUser
             {
+                UserId = tags.GetValueOrDefault("user-id", defaultValue: "0"),
                 DisplayName = displayName,
-                Color = tags.GetValueOrDefault("color", defaultValue: "#FFFFFF"),
+                Color = tags.GetValueOrDefault("color", "#FFFFFF"),
+                IsVIP = tags.TryGetValue("vip", out var vip) && vip == "1",
                 IsSubscriber = tags.TryGetValue("subscriber", out var sub) && sub == "1",
                 IsModerator = tags.TryGetValue("mod", out var mod) && mod == "1",
                 IsBroadcaster = displayName.Equals(channel, System.StringComparison.OrdinalIgnoreCase)
@@ -448,9 +474,8 @@ internal static class TwitchChat
         }
         catch (System.Exception ex)
         {
-            Plugin.Logger.LogError($"Failed to get TwitchUser. {ex}");
+            Plugin.Logger.LogError($"Failed to get TwitchUser: {ex}");
+            return default;
         }
-
-        return default;
     }
 }

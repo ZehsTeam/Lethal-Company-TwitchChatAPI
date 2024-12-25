@@ -32,6 +32,11 @@ internal class Plugin : BaseUnityPlugin
         //_harmony.PatchAll(typeof());
 
         ConfigManager = new ConfigManager();
+
+        if (ConfigManager.TwitchChat_Enabled.Value)
+        {
+            TwitchChat.Connect();
+        }
     }
 
     public void LogInfoExtended(object data)

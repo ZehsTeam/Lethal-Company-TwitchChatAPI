@@ -8,8 +8,8 @@ public static class API
     public static event Action OnConnect;
     public static event Action OnDisconnect;
     public static event Action<TwitchMessage> OnMessage;
-    public static event Action<TwitchSubEvent> OnSub;
     public static event Action<TwitchCheerEvent> OnCheer;
+    public static event Action<TwitchSubEvent> OnSub;
     public static event Action<TwitchRaidEvent> OnRaid;
     public static event Action<TwitchRoomState> OnRoomStateUpdate;
 

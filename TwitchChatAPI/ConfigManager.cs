@@ -26,9 +26,9 @@ internal class ConfigManager
         ExtendedLogging = ConfigHelper.Bind("General", "ExtendedLogging", defaultValue: false, "Enable extended logging.");
 
         // Twitch Chat
-        TwitchChat_Enabled = ConfigHelper.Bind("Twitch Chat", "Enabled", defaultValue: true, "Enable/Disable the connection to Twitch.");
+        TwitchChat_Enabled = ConfigHelper.Bind("Twitch Chat", "Enabled", defaultValue: true, "Enable/Disable the connection to Twitch chat.");
         TwitchChat_Channel = ConfigHelper.Bind("Twitch Chat", "Channel", defaultValue: "", "Your Twitch channel username.");
-        ConfigHelper.AddButton("Twitch Chat", "Refresh Connection", "Refresh the connection to Twitch.", "Refresh", TwitchChat_Refresh_Clicked);
+        ConfigHelper.AddButton("Twitch Chat", "Refresh Connection", "Refresh the connection to Twitch chat.", "Refresh", TwitchChat_Refresh_Clicked);
         TwitchChat_Enabled.SettingChanged += (object sender, System.EventArgs e) => TwitchChat_Enabled_SettingChanged();
         TwitchChat_Channel.SettingChanged += (object sender, System.EventArgs e) => TwitchChat_Channel_SettingChanged();
     }
@@ -47,7 +47,10 @@ internal class ConfigManager
 
     private void TwitchChat_Channel_SettingChanged()
     {
-        TwitchChat_Refresh_Clicked();
+        if (TwitchChat_Enabled.Value)
+        {
+            TwitchChat.Connect();
+        }
     }
 
     private void TwitchChat_Refresh_Clicked()
