@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace com.github.zehsteam.TwitchChatAPI;
+namespace com.github.zehsteam.TwitchChatAPI.Helpers;
 
 internal static class ConfigHelper
 {

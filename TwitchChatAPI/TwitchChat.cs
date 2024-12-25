@@ -1,7 +1,6 @@
 ﻿using com.github.zehsteam.TwitchChatAPI.Enums;
 using com.github.zehsteam.TwitchChatAPI.Objects;
 using Newtonsoft.Json;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -93,7 +92,7 @@ internal static class TwitchChat
 
             await Task.Run(ListenAsync, _cts.Token);
         }
-        catch (Exception ex)
+        catch (System.Exception ex)
         {
             _connectionState = ConnectionState.Disconnected;
             _isReconnecting = false;
@@ -155,7 +154,7 @@ internal static class TwitchChat
                 Plugin.Logger.LogError($"Twitch chat listen task canceled.");
             }
         }
-        catch (Exception ex)
+        catch (System.Exception ex)
         {
             if (Enabled && !_isReconnecting)
             {
@@ -174,15 +173,15 @@ internal static class TwitchChat
         {
             if (message.StartsWith("@") && message.Contains("PRIVMSG"))
             {
-                ProcessPRIVMSG(message);
+                ProcessMessage_PRIVMSG(message);
             }
             else if (message.StartsWith("@") && message.Contains("USERNOTICE"))
             {
-                ProcessUSERNOTICE(message);
+                ProcessMessage_USERNOTICE(message);
             }
             else if (message.StartsWith("@") && message.Contains("ROOMSTATE"))
             {
-                ProcessROOMSTATE(message);
+                ProcessMessage_ROOMSTATE(message);
             }
             else
             {
@@ -191,143 +190,229 @@ internal static class TwitchChat
         }
         catch (System.Exception ex)
         {
-            Plugin.Logger.LogError($"Failed to process message: {message} Error: {ex}");
+            Plugin.Logger.LogError($"Failed to process message:\n\n{message}\n\nError: {ex}");
         }
     }
 
-    private static void ProcessPRIVMSG(string message)
+    private static void ProcessMessage_PRIVMSG(string message)
     {
-        // Parse metadata tags
-        var tagsSection = message.Split(' ')[0].Substring(1); // Remove leading '@'
-        var tags = tagsSection.Split(';').ToDictionary(
-            tag => tag.Split('=')[0],
-            tag => tag.Contains('=') ? tag.Split('=')[1] : ""
-        );
-
-        // Extract user and message details
-        var contentSection = message.Split("PRIVMSG")[1];
-        var contentParts = contentSection.Split(':');
-        var userName = message.Split('!')[0].Split(':')[1];
-        var channel = contentParts[0].Trim();
-        var chatMessage = contentParts[1].Trim();
-
-        // Determine broadcaster status
-        var channelName = Channel.TrimStart('#').ToLower();
-        var isBroadcaster = userName.ToLower() == channelName;
-
-        // Populate TwitchMessage
-        var twitchMessage = new TwitchMessage
+        try
         {
-            Channel = channel,
-            DisplayName = tags.TryGetValue("display-name", out var displayName) ? displayName : userName,
-            Username = userName,
-            Message = chatMessage,
-            Color = tags.TryGetValue("color", out var color) ? color : "#FFFFFF",
-            IsBroadcaster = isBroadcaster,
-            IsModerator = tags.TryGetValue("mod", out var mod) && mod == "1",
-            IsSubscriber = tags.TryGetValue("subscriber", out var sub) && sub == "1",
-            Tags = tags // Retain raw tags for extensibility
-        };
+            string tagsSection = message.Split(' ')[0].Substring(1); // Remove leading '@'
 
-        Plugin.Instance.LogInfoExtended($"[{twitchMessage.DisplayName}] {twitchMessage.Message}");
+            var tags = tagsSection.Split(';').ToDictionary(
+                tag => tag.Split('=')[0],
+                tag => tag.Contains('=') ? tag.Split('=')[1] : ""
+            );
 
-        API.InvokeOnMessage(twitchMessage);
+            string contentSection = message.Split("PRIVMSG")[1];
+            string[] contentParts = contentSection.Split(':');
+            string channel = contentParts[0].Trim().TrimStart('#');
+            string chatMessage = contentParts.Length > 1 ? contentParts[1].Trim() : string.Empty;
+
+            TwitchUser twitchUser = GetTwitchUser(channel, tags);
+
+            var twitchMessage = new TwitchMessage
+            {
+                Channel = channel,
+                User = twitchUser,
+                Message = chatMessage,
+                Tags = tags // Retain raw tags for extensibility
+            };
+
+            Plugin.Instance.LogInfoExtended($"\n{JsonConvert.SerializeObject(twitchMessage, Formatting.Indented)}");
+
+            API.InvokeOnMessage(twitchMessage);
+        }
+        catch (System.Exception ex)
+        {
+            Plugin.Logger.LogError($"Failed to process PRIVMSG message:\n\n{message}\n\nError: {ex}");
+        }
     }
 
-    private static void ProcessUSERNOTICE(string message)
+    private static void ProcessMessage_USERNOTICE(string message)
     {
-        // Parse metadata tags
-        string tagsSection = message.Split(' ')[0].Substring(1); // Remove leading '@'
-        var tags = tagsSection.Split(';').ToDictionary(
-            tag => tag.Split('=')[0],
-            tag => tag.Contains('=') ? tag.Split('=')[1] : ""
-        );
-
-        // Extract channel
-        string channel = message.Split("USERNOTICE")[1];
-        string channelName = channel.TrimStart('#').ToLower();
-
-        string msgId = tags.GetValueOrDefault("msg-id", defaultValue: string.Empty);
-
-        if (string.IsNullOrWhiteSpace(msgId))
+        try
         {
-            Plugin.Logger.LogError($"Failed to process USERNOTICE message: {message}");
-            return;
+            string tagsSection = message.Split(' ')[0].Substring(1); // Remove leading '@'
+
+            var tags = tagsSection.Split(';').ToDictionary(
+                tag => tag.Split('=')[0],
+                tag => tag.Contains('=') ? tag.Split('=')[1] : ""
+            );
+
+            string msgId = tags.GetValueOrDefault("msg-id", defaultValue: string.Empty);
+
+            if (string.IsNullOrEmpty(msgId))
+            {
+                Plugin.Logger.LogError($"Failed to process USERNOTICE message:\n\n{message}");
+                return;
+            }
+
+            string contentSection = message.Split("USERNOTICE")[1];
+            string[] contentParts = contentSection.Split(':');
+            string channel = contentParts[0].Trim().TrimStart('#');
+            string chatMessage = contentParts.Length > 1 ? contentParts[1].Trim() : string.Empty;
+
+            TwitchUser twitchUser = GetTwitchUser(channel, tags);
+            if (twitchUser.Equals(default)) return;
+
+            if (msgId == "sub" || msgId == "resub" || msgId == "subgift" || msgId == "submysterygift")
+            {
+                ProcessMessage_USERNOTICE_Sub(message, channel, twitchUser, chatMessage, tags);
+            }
+
+            if (msgId == "raid")
+            {
+                ProcessMessage_USERNOTICE_Cheer(message, channel, twitchUser, chatMessage, tags);
+            }
+
+            if (msgId == "cheer")
+            {
+                ProcessMessage_USERNOTICE_Raid(message, channel, twitchUser, chatMessage, tags);
+            }
         }
-
-        string displayName = tags.GetValueOrDefault("display-name", defaultValue: string.Empty);
-        string color = tags.GetValueOrDefault("color", defaultValue: "#FFFFFF");
-
-        // Handle Subscription and Resubscription
-        if (msgId == "sub" || msgId == "resub")
+        catch (System.Exception ex)
         {
+            Plugin.Logger.LogError($"Failed to process USERNOTICE message:\n\n{message}\n\nError: {ex}");
+        }
+    }
+
+    private static void ProcessMessage_USERNOTICE_Sub(string message, string channel, TwitchUser twitchUser, string chatMessage, Dictionary<string, string> tags)
+    {
+        try
+        {
+            string msgId = tags.GetValueOrDefault("msg-id", defaultValue: string.Empty);
+
+            if (string.IsNullOrEmpty(msgId))
+            {
+                Plugin.Logger.LogError($"Failed to process USERNOTICE message: {message}");
+                return;
+            }
+
+            SubType subType = SubType.Sub;
+
+            switch (msgId)
+            {
+                case "resub":
+                    subType = SubType.Resub;
+                    break;
+                case "subgift":
+                    subType = SubType.SubGift;
+                    break;
+                case "submysterygift":
+                    subType = SubType.SubMysteryGift;
+                    break;
+            }
+
+            int tier = 1;
+
+            if (tags.TryGetValue("msg-param-sub-plan", out string subPlan))
+            {
+                if (subPlan == "Prime")
+                {
+                    subType = SubType.Prime;
+                }
+                else if (subPlan == "2000")
+                {
+                    tier = 2;
+                }
+                else if (subPlan == "3000")
+                {
+                    tier = 3;
+                }
+            }
+
             var subEvent = new TwitchSubEvent
             {
                 Channel = channel,
-                SubscriberName = displayName,
-                CumulativeMonths = int.Parse(tags["msg-param-cumulative-months"]),
-                IsResub = msgId == "resub",
-                GifterName = tags.ContainsKey("msg-param-gifter-name") ? tags["msg-param-gifter-name"] : null,
-                Tags = tags
+                User = twitchUser,
+                Message = chatMessage,
+                Tags = tags,
+                SubType = subType,
+                Tier = tier,
+                Months = int.Parse(tags.GetValueOrDefault("msg-param-cumulative-months", defaultValue: "0")),
+                RecipientUser = tags.GetValueOrDefault("msg-param-recipient-display-name", defaultValue: string.Empty),
+                GiftCount = int.Parse(tags.GetValueOrDefault("msg-param-mass-gift-count", defaultValue: "0"))
             };
 
             Plugin.Instance.LogInfoExtended($"RAW subscription message: {message}");
-            Plugin.Instance.LogInfoExtended($"Subscription event: {subEvent.SubscriberName} subscribed for {subEvent.CumulativeMonths} months! Gifter: {subEvent.GifterName ?? "None"}");
+            Plugin.Instance.LogInfoExtended($"[!] Subscription event: \n{JsonConvert.SerializeObject(subEvent, Formatting.Indented)}");
 
             API.InvokeOnSub(subEvent);
         }
-
-        // Handle Raid event
-        if (msgId == "raid")
+        catch (System.Exception ex)
         {
-            var raidEvent = new TwitchRaidEvent
-            {
-                Channel = channel,
-                RaiderName = tags["msg-param-displayName"],
-                ViewerCount = int.Parse(tags["msg-param-viewerCount"])
-            };
-
-            Plugin.Instance.LogInfoExtended($"RAW raid message: {message}");
-            Plugin.Instance.LogInfoExtended($"Raid detected: {raidEvent.RaiderName} is raiding with {raidEvent.ViewerCount} viewers!");
-
-            API.InvokeOnRaid(raidEvent);
+            Plugin.Logger.LogError($"Failed to process USERNOTICE message:\n\n{message}\n\nError: {ex}");
         }
+    }
 
-        // Handle Cheer event
-        if (msgId == "cheer")
+    private static void ProcessMessage_USERNOTICE_Cheer(string message, string channel, TwitchUser twitchUser, string chatMessage, Dictionary<string, string> tags)
+    {
+        try
         {
             var cheerEvent = new TwitchCheerEvent
             {
                 Channel = channel,
-                CheerUserName = twitchMessage.DisplayName,
-                CheerAmount = int.Parse(tags["msg-param-currency"]),
+                User = twitchUser,
+                Message = chatMessage,
+                Tags = tags,
+                CheerAmount = int.Parse(tags.GetValueOrDefault("msg-param-currency", defaultValue: "0")),
             };
 
             Plugin.Instance.LogInfoExtended($"RAW cheer message: {message}");
-            Plugin.Instance.LogInfoExtended($"Cheer event: {cheerEvent.CheerUserName} cheered {cheerEvent.CheerAmount} bits!");
+            Plugin.Instance.LogInfoExtended($"[!] Cheer event: {cheerEvent.User.DisplayName} cheered {cheerEvent.CheerAmount} bits!\n{JsonConvert.SerializeObject(cheerEvent, Formatting.Indented)}");
 
             API.InvokeOnCheer(cheerEvent);
         }
+        catch (System.Exception ex)
+        {
+            Plugin.Logger.LogError($"Failed to process USERNOTICE message:\n\n{message}\n\nError: {ex}");
+        }
     }
 
-    private static void ProcessROOMSTATE(string message)
+    private static void ProcessMessage_USERNOTICE_Raid(string message, string channel, TwitchUser twitchUser, string chatMessage, Dictionary<string, string> tags)
+    {
+        try
+        {
+            var raidEvent = new TwitchRaidEvent
+            {
+                Channel = channel,
+                User = twitchUser,
+                Message = chatMessage,
+                Tags = tags,
+                ViewerCount = int.Parse(tags.GetValueOrDefault("msg-param-viewerCount", defaultValue: "0"))
+            };
+
+            Plugin.Instance.LogInfoExtended($"RAW raid message: {message}");
+            Plugin.Instance.LogInfoExtended($"[!] Raid detected: {raidEvent.User.DisplayName} is raiding with {raidEvent.ViewerCount} viewers!\n{JsonConvert.SerializeObject(raidEvent, Formatting.Indented)}");
+
+            API.InvokeOnRaid(raidEvent);
+        }
+        catch (System.Exception ex)
+        {
+            Plugin.Logger.LogError($"Failed to process USERNOTICE message:\n\n{message}\n\nError: {ex}");
+        }
+    }
+
+    private static void ProcessMessage_ROOMSTATE(string message)
     {
         try
         {
             // Parse metadata tags
-            var tagsSection = message.Split(' ')[0].Substring(1); // Remove leading '@'
+            string tagsSection = message.Split(' ')[0].Substring(1); // Remove leading '@'
+
             var tags = tagsSection.Split(';').ToDictionary(
                 tag => tag.Split('=')[0],
                 tag => tag.Contains('=') ? tag.Split('=')[1] : ""
             );
 
             // Extract channel
-            var channel = message.Split("USERNOTICE")[1];
-            var channelName = channel.TrimStart('#').ToLower();
+            string channel = message.Split("ROOMSTATE")[1].Trim().TrimStart('#');
 
             var roomState = new TwitchRoomState
             {
-                Channel = channelName,
+                Channel = channel,
                 IsEmoteOnly = tags.ContainsKey("emote-only") && tags["emote-only"] == "1",
                 IsFollowersOnly = tags.ContainsKey("followers-only") && tags["followers-only"] != "-1",
                 IsR9K = tags.ContainsKey("r9k") && tags["r9k"] == "1",
@@ -342,7 +427,30 @@ internal static class TwitchChat
         }
         catch (System.Exception ex)
         {
-            Plugin.Logger.LogError($"Failed to process ROOMSTATE message. {ex}");
+            Plugin.Logger.LogError($"Failed to process ROOMSTATE message:\n\n{message}\n\nError: {ex}");
         }
+    }
+
+    private static TwitchUser GetTwitchUser(string channel, Dictionary<string, string> tags)
+    {
+        try
+        {
+            string displayName = tags.GetValueOrDefault("display-name", defaultValue: "Anonymous");
+
+            return new TwitchUser
+            {
+                DisplayName = displayName,
+                Color = tags.GetValueOrDefault("color", defaultValue: "#FFFFFF"),
+                IsSubscriber = tags.TryGetValue("subscriber", out var sub) && sub == "1",
+                IsModerator = tags.TryGetValue("mod", out var mod) && mod == "1",
+                IsBroadcaster = displayName.Equals(channel, System.StringComparison.OrdinalIgnoreCase)
+            };
+        }
+        catch (System.Exception ex)
+        {
+            Plugin.Logger.LogError($"Failed to get TwitchUser. {ex}");
+        }
+
+        return default;
     }
 }

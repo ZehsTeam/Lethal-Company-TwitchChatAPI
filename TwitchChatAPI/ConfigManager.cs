@@ -1,4 +1,5 @@
 ﻿using BepInEx.Configuration;
+using com.github.zehsteam.TwitchChatAPI.Helpers;
 
 namespace com.github.zehsteam.TwitchChatAPI;
 

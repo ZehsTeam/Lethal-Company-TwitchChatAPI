@@ -13,6 +13,7 @@ public static class API
     public static event Action<TwitchRaidEvent> OnRaid;
     public static event Action<TwitchRoomState> OnRoomStateUpdate;
 
+    #region Internal
     internal static void InvokeOnConnect()
     {
         OnConnect?.Invoke();
@@ -47,4 +48,5 @@ public static class API
     {
         OnRoomStateUpdate?.Invoke(roomState);
     }
+    #endregion
 }
