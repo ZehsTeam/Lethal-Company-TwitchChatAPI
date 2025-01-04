@@ -1,10 +1,12 @@
 ﻿using com.github.zehsteam.TwitchChatAPI.Enums;
+using com.github.zehsteam.TwitchChatAPI.MonoBehaviours;
 using com.github.zehsteam.TwitchChatAPI.Objects;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,6 +19,7 @@ internal static class TwitchChat
 
     public static bool Enabled => Plugin.ConfigManager.TwitchChat_Enabled.Value;
     public static string Channel => $"#{Plugin.ConfigManager.TwitchChat_Channel.Value}".Trim();
+    public static ConnectionState ConnectionState => _connectionState;
 
     private static TcpClient _client;
     private static NetworkStream _stream;
@@ -26,7 +29,10 @@ internal static class TwitchChat
 
     private static ConnectionState _connectionState = ConnectionState.None;
     private static bool _isReconnecting;
+    private static Task _reconnectTask;
+    private static CancellationTokenSource _reconnectCts;
     private static int _reconnectDelay = 5000; // 5 seconds
+    private static bool _explicitDisconnect;
 
     private static readonly object _lock = new object();
 
@@ -37,7 +43,16 @@ internal static class TwitchChat
 
     public static async Task ConnectAsync()
     {
-        _isReconnecting = false;
+        lock (_lock)
+        {
+            if (_isReconnecting)
+            {
+                CancelReconnect();
+            }
+
+            _explicitDisconnect = false;
+            _isReconnecting = false;
+        }
 
         if (!Enabled)
         {
@@ -53,13 +68,11 @@ internal static class TwitchChat
 
         if (_connectionState == ConnectionState.Connected)
         {
-            _isReconnecting = true;
             Disconnect();
         }
         
         if (string.IsNullOrWhiteSpace(Channel) || Channel == "#")
         {
-            _isReconnecting = false;
             Plugin.Logger.LogWarning("Failed to start Twitch chat connection: Invalid or empty channel name.");
             return;
         }
@@ -67,6 +80,7 @@ internal static class TwitchChat
         Plugin.Logger.LogInfo("Establishing connection to Twitch chat...");
 
         _connectionState = ConnectionState.Connecting;
+        PluginCanvas.Instance?.UpdateSettingsWindowConnectionStatus();
 
         try
         {
@@ -86,7 +100,8 @@ internal static class TwitchChat
             await _writer.WriteLineAsync($"JOIN {Channel}");
 
             _connectionState = ConnectionState.Connected;
-            _isReconnecting = false;
+            PluginCanvas.Instance?.UpdateSettingsWindowConnectionStatus();
+            _explicitDisconnect = false;
 
             Plugin.Logger.LogInfo($"Successfully connected to Twitch chat {Channel}.");
 
@@ -97,9 +112,12 @@ internal static class TwitchChat
         catch (System.Exception ex)
         {
             _connectionState = ConnectionState.Disconnected;
-            _isReconnecting = false;
+            PluginCanvas.Instance?.UpdateSettingsWindowConnectionStatus();
+            _explicitDisconnect = false;
 
             Plugin.Logger.LogError($"Failed to connect to Twitch chat {Channel}. {ex}");
+
+            ScheduleReconnect();
         }
     }
 
@@ -107,6 +125,9 @@ internal static class TwitchChat
     {
         lock (_lock)
         {
+            _explicitDisconnect = true;
+            CancelReconnect();
+
             if (_connectionState != ConnectionState.Connected && _connectionState != ConnectionState.Connecting)
             {
                 Plugin.Logger.LogInfo("Twitch chat is not connected or already disconnecting.");
@@ -114,6 +135,7 @@ internal static class TwitchChat
             }
 
             _connectionState = ConnectionState.Disconnecting;
+            PluginCanvas.Instance?.UpdateSettingsWindowConnectionStatus();
 
             _cts?.Cancel();
 
@@ -134,7 +156,55 @@ internal static class TwitchChat
                 Plugin.Logger.LogInfo("Twitch chat connection stopped.");
             }
 
+            _connectionState = ConnectionState.Disconnected;
+            PluginCanvas.Instance?.UpdateSettingsWindowConnectionStatus();
+
             API.InvokeOnDisconnect();
+        }
+    }
+
+    private static void ScheduleReconnect()
+    {
+        lock (_lock)
+        {
+            if (!Enabled || _explicitDisconnect || _isReconnecting)
+            {
+                return;
+            }
+
+            Plugin.Logger.LogInfo($"Reconnection to Twitch chat will be attempted in {_reconnectDelay / 1000} seconds.");
+
+            _isReconnecting = true;
+
+            _reconnectCts = new CancellationTokenSource();
+            _reconnectTask = Task.Delay(_reconnectDelay, _reconnectCts.Token).ContinueWith(async t =>
+            {
+                if (t.IsCanceled) return;
+
+                lock (_lock)
+                {
+                    _isReconnecting = false;
+                }
+
+                if (!Enabled) return;
+
+                Plugin.Logger.LogInfo("Attempting to reconnect to Twitch chat...");
+                await ConnectAsync();
+            });
+        }
+    }
+
+    private static void CancelReconnect()
+    {
+        lock (_lock)
+        {
+            if (_reconnectTask != null && !_reconnectTask.IsCompleted)
+            {
+                _reconnectCts?.Cancel();
+                _reconnectTask = null;
+            }
+
+            _isReconnecting = false;
         }
     }
 
@@ -142,10 +212,10 @@ internal static class TwitchChat
     {
         try
         {
+            if (_reader == null) return; // Ensure the reader is not null
+
             while (_cts != null && !_cts.Token.IsCancellationRequested)
             {
-                if (_reader == null) break; // Ensure the reader is not null
-
                 string message = await _reader.ReadLineAsync();
                 if (message == null) continue;
 
@@ -167,16 +237,19 @@ internal static class TwitchChat
         }
         catch (System.Exception ex)
         {
-            if (Enabled && !_isReconnecting)
+            if (Enabled && !_explicitDisconnect)
             {
                 Plugin.Logger.LogError($"Twitch chat listen task failed. {ex}");
             }
+
+            ScheduleReconnect();
         }
         finally
         {
             lock (_lock)
             {
                 _connectionState = ConnectionState.Disconnected;
+                PluginCanvas.Instance?.UpdateSettingsWindowConnectionStatus();
             }
         }
     }
@@ -259,6 +332,18 @@ internal static class TwitchChat
     {
         try
         {
+            var cheerTypes = new string[]
+            {
+                "Cheer", "cheerwhal", "Corgo", "uni", "ShowLove", "Party", "SeemsGood", "Pride",
+                "Kappa", "FrankerZ", "HeyGuys", "DansGame", "EleGiggle", "TriHard", "Kreygasm",
+                "4Head", "SwiftRage", "NotLikeThis", "FailFish", "VoHiYo", "PJSalt", "MrDestructoid",
+                "bday", "RIPCheer", "Shamrock"
+            };
+
+            string pattern = @"\b(" + string.Join("|", cheerTypes) + @")\d+\b";
+
+            chatMessage = Regex.Replace(chatMessage, pattern, string.Empty, RegexOptions.IgnoreCase).Trim();
+
             var cheerEvent = new TwitchCheerEvent
             {
                 Channel = channel,
@@ -356,13 +441,20 @@ internal static class TwitchChat
                     break;
             }
 
+            if (subType == SubType.SubGift && tags.ContainsKey("msg-param-community-gift-id"))
+            {
+                Plugin.Instance.LogInfoExtended($"Skipping subgift since it originates from a submysterygift. Message: {message}");
+                return;
+            }
+
+            bool isPrime = false;
             int tier = 1;
 
-            if (tags.TryGetValue("msg-param-sub-plan", out string subPlan))
+            if (tags.TryGetValue("msg-param-sub-plan", out string subPlan) && !string.IsNullOrEmpty(subPlan))
             {
                 if (subPlan == "Prime")
                 {
-                    subType = SubType.Prime;
+                    isPrime = true;
                 }
                 else if (subPlan == "2000")
                 {
@@ -381,6 +473,7 @@ internal static class TwitchChat
                 Message = chatMessage,
                 Tags = tags,
                 SubType = subType,
+                IsPrime = isPrime,
                 Tier = tier,
                 Months = int.Parse(tags.GetValueOrDefault("msg-param-cumulative-months", defaultValue: "0")),
                 RecipientUser = tags.GetValueOrDefault("msg-param-recipient-display-name", defaultValue: string.Empty),
@@ -441,7 +534,8 @@ internal static class TwitchChat
                 IsFollowersOnly = tags.ContainsKey("followers-only") && tags["followers-only"] != "-1",
                 IsR9K = tags.ContainsKey("r9k") && tags["r9k"] == "1",
                 IsSlowMode = tags.ContainsKey("slow") && tags["slow"] != "0",
-                IsSubOnly = tags.ContainsKey("subs-only") && tags["subs-only"] == "1"
+                IsSubsOnly = tags.ContainsKey("subs-only") && tags["subs-only"] == "1",
+                Tags = tags
             };
 
             Plugin.Instance.LogInfoExtended($"RAW roomstate message: {message}");

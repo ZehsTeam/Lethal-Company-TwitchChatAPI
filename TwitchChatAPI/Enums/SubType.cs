@@ -5,6 +5,5 @@ public enum SubType
     Sub,
     Resub,
     SubGift,
-    SubMysteryGift,
-    Prime
+    SubMysteryGift
 }

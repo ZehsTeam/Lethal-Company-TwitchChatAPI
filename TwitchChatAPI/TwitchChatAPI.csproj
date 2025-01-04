@@ -30,6 +30,12 @@
   </ItemGroup>
   
   <ItemGroup>
+    <None Include="..\..\..\..\..\LethalCompanyUnityProjects\LethalCompanyDecompiledV56\AssetBundles\twitchchatapi_assets" Link="twitchchatapi_assets">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  
+  <ItemGroup>
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.2" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="5.4.*" />
@@ -40,14 +46,19 @@
   </ItemGroup>
   
   <PropertyGroup>
-    <!-- Local libraries folder -->
+    <!-- Mod libraries folder -->
     <LibraryFolder>D:\Documents\Lethal Company Modding\Mods</LibraryFolder>
-    
+
+    <!-- Steam library folder -->
+    <SteamLibrary>D:\SteamLibrary\steamapps\common</SteamLibrary>
+
     <!-- Lethal Company plugins folder -->
-    <PluginsFolder>D:\SteamLibrary\steamapps\common\Lethal Company\BepInEx\plugins</PluginsFolder>
-    
+    <PluginsFolder>$(SteamLibrary)\Lethal Company\BepInEx\plugins</PluginsFolder>
+
     <!-- Gale profile name -->
     <GaleProfile>Mod Development</GaleProfile>
+
+    <!-- Gale plugins folder -->
     <GalePluginsFolder>$(AppData)\com.kesomannen.gale\lethal-company\profiles\$(GaleProfile)\BepInEx\plugins\Zehs-$(MSBuildProjectName)</GalePluginsFolder>
     
     <!-- Other settings -->
@@ -70,9 +81,11 @@
   
   <Target Name="CopyToPluginsFolder" AfterTargets="PostBuildEvent">
     <Copy DestinationFolder="$(PluginsFolder)" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" SourceFiles="$(TargetPath)" />
+    <Copy DestinationFolder="$(PluginsFolder)" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" SourceFiles="$(TargetDir)\twitchchatapi_assets" />
   </Target>
   
   <Target Name="CopyToGalePluginsFolder" AfterTargets="CopyToPluginsFolder">
     <Copy DestinationFolder="$(GalePluginsFolder)" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" SourceFiles="$(TargetPath)" />
+    <Copy DestinationFolder="$(GalePluginsFolder)" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" SourceFiles="$(TargetDir)\twitchchatapi_assets" />
   </Target>
 </Project>

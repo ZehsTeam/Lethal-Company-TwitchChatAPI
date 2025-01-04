@@ -2,12 +2,15 @@
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using com.github.zehsteam.TwitchChatAPI.Dependencies;
+using com.github.zehsteam.TwitchChatAPI.MonoBehaviours;
+using com.github.zehsteam.TwitchChatAPI.Patches;
 using HarmonyLib;
 
 namespace com.github.zehsteam.TwitchChatAPI;
 
 [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 [BepInDependency(LethalConfigProxy.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)]
+[BepInDependency(MoreCompanyProxy.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)]
 internal class Plugin : BaseUnityPlugin
 {
     private readonly Harmony _harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
@@ -29,7 +32,10 @@ internal class Plugin : BaseUnityPlugin
 
         Config = Utils.CreateGlobalConfigFile();
 
-        //_harmony.PatchAll(typeof());
+        _harmony.PatchAll(typeof(MenuManagerPatch));
+        _harmony.PatchAll(typeof(QuickMenuManagerPatch));
+
+        Content.Load();
 
         ConfigManager = new ConfigManager();
 
@@ -39,9 +45,26 @@ internal class Plugin : BaseUnityPlugin
         }
     }
 
+    public void SpawnPluginCanvas()
+    {
+        if (PluginCanvas.Instance != null)
+        {
+            return;
+        }
+
+        Instantiate(Content.PluginCanvasPrefab);
+
+        Logger.LogInfo("Spawned PluginCanvas.");
+    }
+
     public void LogInfoExtended(object data)
     {
         LogExtended(LogLevel.Info, data);
+    }
+
+    public void LogWarningExtended(object data)
+    {
+        LogExtended(LogLevel.Warning, data);
     }
 
     public void LogExtended(LogLevel level, object data)

@@ -14,6 +14,7 @@ public abstract class TwitchEvent
 public class TwitchSubEvent : TwitchEvent
 {
     public SubType SubType { get; set; }
+    public bool IsPrime { get; set; }
     public int Tier { get; set; }
     public int Months { get; set; }
     public string RecipientUser { get; set; }

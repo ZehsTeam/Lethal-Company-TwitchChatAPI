@@ -1,4 +1,6 @@
-﻿namespace com.github.zehsteam.TwitchChatAPI.Objects;
+﻿using System.Collections.Generic;
+
+namespace com.github.zehsteam.TwitchChatAPI.Objects;
 
 public struct TwitchRoomState
 {
@@ -7,5 +9,6 @@ public struct TwitchRoomState
     public bool IsFollowersOnly { get; set; }
     public bool IsR9K { get; set; }
     public bool IsSlowMode { get; set; }
-    public bool IsSubOnly { get; set; }
+    public bool IsSubsOnly { get; set; }
+    public Dictionary<string, string> Tags { get; set; } // Raw tags for extensibility
 }

@@ -17,7 +17,7 @@ internal class ConfigManager
         BindConfigs();
         ConfigHelper.ClearUnusedEntries();
     }
-
+    
     private void BindConfigs()
     {
         ConfigHelper.SkipAutoGen();

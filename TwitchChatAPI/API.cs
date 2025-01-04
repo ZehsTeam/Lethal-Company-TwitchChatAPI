@@ -1,10 +1,12 @@
-﻿using com.github.zehsteam.TwitchChatAPI.Objects;
+﻿using com.github.zehsteam.TwitchChatAPI.Enums;
+using com.github.zehsteam.TwitchChatAPI.Objects;
 using System;
 
 namespace com.github.zehsteam.TwitchChatAPI;
 
 public static class API
 {
+    public static ConnectionState ConnectionState => TwitchChat.ConnectionState;
     public static event Action OnConnect;
     public static event Action OnDisconnect;
     public static event Action<TwitchMessage> OnMessage;
