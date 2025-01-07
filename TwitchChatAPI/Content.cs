@@ -7,6 +7,7 @@ internal static class Content
 {
     // Prefabs
     public static GameObject PluginCanvasPrefab { get; private set; }
+    public static GameObject MainThreadDispatcherPrefab { get; private set; }
 
     public static void Load()
     {
@@ -20,6 +21,7 @@ internal static class Content
 
         // Prefabs
         PluginCanvasPrefab = LoadAssetFromAssetBundle<GameObject>("TwitchChatAPICanvas", assetBundle);
+        MainThreadDispatcherPrefab = LoadAssetFromAssetBundle<GameObject>("MainThreadDispatcher", assetBundle);
 
         Plugin.Logger.LogInfo("Successfully loaded assets from AssetBundle!");
     }

@@ -1,7 +1,6 @@
 ﻿using com.github.zehsteam.TwitchChatAPI.Enums;
 using com.github.zehsteam.TwitchChatAPI.Objects;
 using System;
-using System.IO;
 
 namespace com.github.zehsteam.TwitchChatAPI.Helpers;
 
@@ -12,8 +11,8 @@ internal static class SaveHelper
 
     static SaveHelper()
     {
-        _modpackSave = new JsonSave(filePath: Path.Combine(Utils.GetConfigDirectoryPath(), $"{MyPluginInfo.PLUGIN_NAME}_Save"));
-        _globalSave = new JsonSave(filePath: Path.Combine(Utils.GetGlobalConfigDirectoryPath(), "GlobalSave"));
+        _modpackSave = new JsonSave(directoryPath: Utils.GetConfigDirectoryPath(), fileName: $"{MyPluginInfo.PLUGIN_NAME}_Save");
+        _globalSave = new JsonSave(directoryPath: Utils.GetGlobalConfigDirectoryPath(), fileName: "GlobalSave");
     }
 
     public static bool KeyExists(string key, SaveLocation saveLocation)
@@ -45,28 +44,47 @@ internal static class SaveHelper
 
     public static T LoadValue<T>(string key, SaveLocation saveLocation, T defaultValue = default)
     {
+        if (TryLoadValue(key, saveLocation, out T value))
+        {
+            return value;
+        }
+
+        return defaultValue;
+    }
+
+    public static bool TryLoadValue<T>(string key, SaveLocation saveLocation, out T value)
+    {
+        value = default;
+
+        if (!KeyExists(key, saveLocation))
+        {
+            return false;
+        }
+
         try
         {
             var fullKey = GetKey(key, saveLocation);
             switch (saveLocation)
             {
                 case SaveLocation.CurrentSave:
-                    return ES3.Load(fullKey, GetCurrentSaveFilePath(), defaultValue);
+                    value = ES3.Load<T>(fullKey, GetCurrentSaveFilePath(), defaultValue: default);
+                    return true;
                 case SaveLocation.GeneralSave:
-                    return ES3.Load(fullKey, GetGeneralSaveFilePath(), defaultValue);
+                    value = ES3.Load<T>(fullKey, GetGeneralSaveFilePath(), defaultValue: default);
+                    return true;
                 case SaveLocation.Modpack:
-                    return _modpackSave.LoadValue(fullKey, defaultValue);
+                    return _modpackSave.TryLoadValue(fullKey, out value);
                 case SaveLocation.Global:
-                    return _globalSave.LoadValue(fullKey, defaultValue);
+                    return _globalSave.TryLoadValue(fullKey, out value);
                 default:
                     Plugin.Logger.LogWarning($"LoadValue: Unknown SaveLocation: {saveLocation}");
-                    return defaultValue;
+                    return false;
             }
         }
         catch (Exception ex)
         {
             Plugin.Logger.LogError($"LoadValue Error: Key: \"{key}\", SaveLocation: {saveLocation}. Exception: {ex.Message}");
-            return defaultValue;
+            return false;
         }
     }
 

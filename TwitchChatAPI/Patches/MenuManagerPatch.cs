@@ -20,5 +20,6 @@ internal static class MenuManagerPatch
         if (__instance.isInitScene) return;
 
         Plugin.Instance.SpawnPluginCanvas();
+        Plugin.Instance.SpawnMainThreadDispatcher();
     }
 }

@@ -8,13 +8,16 @@ namespace com.github.zehsteam.TwitchChatAPI.Objects;
 
 internal class JsonSave
 {
-    public string FilePath { get; private set; }
+    public string DirectoryPath { get; private set; }
+    public string FileName { get; private set; }
+    public string FilePath => Path.Combine(DirectoryPath, FileName);
 
     private JObject _data;
 
-    public JsonSave(string filePath)
+    public JsonSave(string directoryPath, string fileName)
     {
-        FilePath = filePath;
+        DirectoryPath = directoryPath;
+        FileName = fileName;
         _data = ReadFile();
     }
 
@@ -31,17 +34,30 @@ internal class JsonSave
 
     public T LoadValue<T>(string key, T defaultValue = default)
     {
+        if (TryLoadValue(key, out T value))
+        {
+            return value;
+        }
+
+        return defaultValue;
+    }
+
+    public bool TryLoadValue<T>(string key, out T value)
+    {
+        value = default;
+
         if (_data == null)
         {
             Plugin.Logger.LogError($"LoadValue: Data is null. Returning default value for key: {key}.");
-            return defaultValue;
+            return false;
         }
 
         if (_data.TryGetValue(key, out JToken jToken))
         {
             try
             {
-                return jToken.ToObject<T>();
+                value = jToken.ToObject<T>();
+                return true;
             }
             catch (JsonException ex)
             {
@@ -56,11 +72,11 @@ internal class JsonSave
                 Plugin.Logger.LogError($"LoadValue: Unexpected Error for key: {key}. {ex.Message}");
             }
 
-            return defaultValue;
+            return false;
         }
 
         Plugin.Instance.LogWarningExtended($"LoadValue: Key '{key}' does not exist. Returning default value.");
-        return defaultValue;
+        return false;
     }
 
     public bool SaveValue<T>(string key, T value)
@@ -124,10 +140,12 @@ internal class JsonSave
     {
         try
         {
-            using FileStream fs = new FileStream(FilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite);
-            using StreamWriter writer = new StreamWriter(fs, Encoding.UTF8);
+            if (!Directory.Exists(DirectoryPath))
+            {
+                Directory.CreateDirectory(DirectoryPath);
+            }
 
-            writer.WriteLine(data.ToString());
+            File.WriteAllText(FilePath, data.ToString(), Encoding.UTF8);
 
             return true;
         }

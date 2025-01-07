@@ -1,5 +1,5 @@
 # TwitchChatAPI
-#### Add Twitch chat integration to your Lethal Company mods! Detect events like Messages, Cheers, Subs, and Raids! No authentication required.
+#### Add Twitch chat integration to your Lethal Company mods! Subscribe to events like Messages, Cheers, Subs, and Raids! No authentication required.
 
 #### <ins>This mod is fully client-side.</ins>
 

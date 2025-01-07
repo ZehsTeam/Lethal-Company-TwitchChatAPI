@@ -1,4 +1,5 @@
 ﻿using com.github.zehsteam.TwitchChatAPI.Enums;
+using com.github.zehsteam.TwitchChatAPI.MonoBehaviours;
 using com.github.zehsteam.TwitchChatAPI.Objects;
 using System;
 
@@ -18,37 +19,58 @@ public static class API
     #region Internal
     internal static void InvokeOnConnect()
     {
-        OnConnect?.Invoke();
+        MainThreadDispatcher.Enqueue(() =>
+        {
+            OnConnect?.Invoke();
+        });
     }
 
     internal static void InvokeOnDisconnect()
     {
-        OnDisconnect?.Invoke();
+        MainThreadDispatcher.Enqueue(() =>
+        {
+            OnDisconnect?.Invoke();
+        });
     }
 
     internal static void InvokeOnMessage(TwitchMessage message)
     {
-        OnMessage?.Invoke(message);
+        MainThreadDispatcher.Enqueue(() =>
+        {
+            OnMessage?.Invoke(message);
+        });
     }
 
     internal static void InvokeOnSub(TwitchSubEvent subEvent)
     {
-        OnSub?.Invoke(subEvent);
+        MainThreadDispatcher.Enqueue(() =>
+        {
+            OnSub?.Invoke(subEvent);
+        });
     }
 
     internal static void InvokeOnCheer(TwitchCheerEvent cheerEvent)
     {
-        OnCheer?.Invoke(cheerEvent);
+        MainThreadDispatcher.Enqueue(() =>
+        {
+            OnCheer?.Invoke(cheerEvent);
+        });
     }
 
     internal static void InvokeOnRaid(TwitchRaidEvent raidEvent)
     {
-        OnRaid?.Invoke(raidEvent);
+        MainThreadDispatcher.Enqueue(() =>
+        {
+            OnRaid?.Invoke(raidEvent);
+        });
     }
 
     internal static void InvokeOnRoomStateUpdate(TwitchRoomState roomState)
     {
-        OnRoomStateUpdate?.Invoke(roomState);
+        MainThreadDispatcher.Enqueue(() =>
+        {
+            OnRoomStateUpdate?.Invoke(roomState);
+        });
     }
     #endregion
 }

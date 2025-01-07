@@ -1,11 +1,8 @@
 ﻿using com.github.zehsteam.TwitchChatAPI.Dependencies;
 using com.github.zehsteam.TwitchChatAPI.Enums;
 using com.github.zehsteam.TwitchChatAPI.Helpers;
-using Newtonsoft.Json.Bson;
-using System.Net.Sockets;
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace com.github.zehsteam.TwitchChatAPI.MonoBehaviours;

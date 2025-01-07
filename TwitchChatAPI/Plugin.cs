@@ -54,7 +54,19 @@ internal class Plugin : BaseUnityPlugin
 
         Instantiate(Content.PluginCanvasPrefab);
 
-        Logger.LogInfo("Spawned PluginCanvas.");
+        Logger.LogInfo("Spawned PluginCanvas");
+    }
+
+    public void SpawnMainThreadDispatcher()
+    {
+        if (MainThreadDispatcher.Instance != null)
+        {
+            return;
+        }
+
+        Instantiate(Content.MainThreadDispatcherPrefab);
+
+        Logger.LogInfo("Spawned MainThreadDispatcher");
     }
 
     public void LogInfoExtended(object data)
