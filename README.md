@@ -1,5 +1,5 @@
 # TwitchChatAPI
-#### Add Twitch chat integration to your Lethal Company mods! Subscribe to events like Messages, Cheers, Subs, and Raids! No authentication required.
+#### Add Twitch chat integration to your Lethal Company mods! Subscribe to events like Messages, Cheers, Subs, and Raids. No authentication required.
 
 #### <ins>This mod is fully client-side.</ins>
 
@@ -7,7 +7,7 @@
 
 Download [TwitchChatAPI](https://thunderstore.io/c/lethal-company/p/Zehs/TwitchChatAPI/) on Thunderstore.
 
-## Usage
+## API Usage
 <details><summary>Click to Expand</summary>
 
 ### API
@@ -19,6 +19,7 @@ namespace com.github.zehsteam.TwitchChatAPI;
 public static class API
 {
     public static ConnectionState ConnectionState { get; }
+
     public static event Action OnConnect;
     public static event Action OnDisconnect;
     public static event Action<TwitchMessage> OnMessage;
@@ -26,6 +27,12 @@ public static class API
     public static event Action<TwitchSubEvent> OnSub;
     public static event Action<TwitchRaidEvent> OnRaid;
     public static event Action<TwitchRoomState> OnRoomStateUpdate;
+
+    public static IReadOnlyCollection<TwitchUser> Users { get; }
+
+    public static bool TryGetUserByUsername(string username, out TwitchUser twitchUser);
+    public static bool TryGetUserByUserId(string userId, out TwitchUser twitchUser);
+    public static TwitchUser[] GetUsersSeenWithin(TimeSpan timeSpan);
 }
 ```
 
