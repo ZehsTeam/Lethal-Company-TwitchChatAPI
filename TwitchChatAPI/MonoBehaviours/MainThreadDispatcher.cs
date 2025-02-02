@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace com.github.zehsteam.TwitchChatAPI.MonoBehaviours;
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 public class MainThreadDispatcher : MonoBehaviour
 {
     public static MainThreadDispatcher Instance { get; private set; }

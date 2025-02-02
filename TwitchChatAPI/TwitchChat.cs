@@ -109,6 +109,7 @@ internal static class TwitchChat
             await _writer.WriteLineAsync($"NICK justinfan123");
             await _writer.WriteLineAsync("CAP REQ :twitch.tv/tags"); // Request metadata tags
             await _writer.WriteLineAsync("CAP REQ :twitch.tv/commands"); // Request events
+            //await _writer.WriteLineAsync("CAP REQ :twitch.tv/membership"); // Request join and part messages
             await _writer.WriteLineAsync($"JOIN {Channel}");
 
             ConnectionState = ConnectionState.Connected;

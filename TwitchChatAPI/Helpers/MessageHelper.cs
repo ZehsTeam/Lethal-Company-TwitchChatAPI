@@ -59,6 +59,8 @@ internal static class MessageHelper
             TwitchUser twitchUser = GetTwitchUser(channel, tags);
             if (twitchUser.Equals(default)) return;
 
+            UserHelper.UpdateUser(twitchUser);
+
             if (tags.ContainsKey("bits"))
             {
                 ProcessMessage_PRIVMSG_Cheer(message, channel, twitchUser, chatMessage, tags);
@@ -150,6 +152,8 @@ internal static class MessageHelper
             TwitchUser twitchUser = GetTwitchUser(channel, tags);
             if (twitchUser.Equals(default)) return;
 
+            UserHelper.UpdateUser(twitchUser);
+
             if (msgId == "sub" || msgId == "resub" || msgId == "subgift" || msgId == "submysterygift")
             {
                 ProcessMessage_USERNOTICE_Sub(message, channel, twitchUser, chatMessage, tags);
@@ -203,7 +207,8 @@ internal static class MessageHelper
             }
 
             bool isPrime = false;
-            int tier = 1;
+
+            SubTier tier = SubTier.One;
 
             if (tags.TryGetValue("msg-param-sub-plan", out string subPlan) && !string.IsNullOrEmpty(subPlan))
             {
@@ -213,11 +218,11 @@ internal static class MessageHelper
                 }
                 else if (subPlan == "2000")
                 {
-                    tier = 2;
+                    tier = SubTier.Two;
                 }
                 else if (subPlan == "3000")
                 {
-                    tier = 3;
+                    tier = SubTier.Three;
                 }
             }
 
@@ -230,7 +235,7 @@ internal static class MessageHelper
                 SubType = subType,
                 IsPrime = isPrime,
                 Tier = tier,
-                Months = int.Parse(tags.GetValueOrDefault("msg-param-cumulative-months", defaultValue: "0")),
+                CumulativeMonths = int.Parse(tags.GetValueOrDefault("msg-param-cumulative-months", defaultValue: "0")),
                 RecipientUser = tags.GetValueOrDefault("msg-param-recipient-display-name", defaultValue: string.Empty),
                 GiftCount = int.Parse(tags.GetValueOrDefault("msg-param-mass-gift-count", defaultValue: "0"))
             };
@@ -310,11 +315,19 @@ internal static class MessageHelper
         {
             string displayName = tags.GetValueOrDefault("display-name", "Anonymous");
 
+            string color = tags.GetValueOrDefault("color", "#FFFFFF");
+
+            if (string.IsNullOrEmpty(color))
+            {
+                color = "#FFFFFF";
+            }
+
             return new TwitchUser
             {
                 UserId = tags.GetValueOrDefault("user-id", defaultValue: "0"),
+                Username = displayName.ToLower(),
                 DisplayName = displayName,
-                Color = tags.GetValueOrDefault("color", "#FFFFFF"),
+                Color = color,
                 IsVIP = tags.TryGetValue("vip", out var vip) && vip == "1",
                 IsSubscriber = tags.TryGetValue("subscriber", out var sub) && sub == "1",
                 IsModerator = tags.TryGetValue("mod", out var mod) && mod == "1",

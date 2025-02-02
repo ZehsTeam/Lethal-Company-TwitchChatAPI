@@ -7,8 +7,8 @@
     
     <AssemblyName>com.github.zehsteam.$(MSBuildProjectName)</AssemblyName> <!-- PLUGIN_GUID -->
     <Product>$(MSBuildProjectName)</Product>                               <!-- PLUGIN_NAME -->
-    <Version>1.0.1</Version>                                               <!-- PLUGIN_VERSION -->
-    <Description></Description>
+    <Version>1.1.0</Version>                                               <!-- PLUGIN_VERSION -->
+    <Description>Add Twitch chat integration to your Lethal Company mods! Subscribe to events like Messages, Cheers, Subs, and Raids. No authentication required.</Description>
     
     <RootNamespace>com.github.zehsteam.$(MSBuildProjectName)</RootNamespace>
     
@@ -63,7 +63,7 @@
     
     <!-- Other settings -->
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <GenerateDocumentationFile>False</GenerateDocumentationFile>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
 	</PropertyGroup>
   
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">

@@ -1,7 +1,10 @@
 ﻿using com.github.zehsteam.TwitchChatAPI.Enums;
+using System;
 using System.Collections.Generic;
 
 namespace com.github.zehsteam.TwitchChatAPI.Objects;
+
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 public abstract class TwitchEvent
 {
@@ -15,10 +18,13 @@ public class TwitchSubEvent : TwitchEvent
 {
     public SubType SubType { get; set; }
     public bool IsPrime { get; set; }
-    public int Tier { get; set; }
-    public int Months { get; set; }
+    public SubTier Tier { get; set; }
+    public int CumulativeMonths { get; set; }
     public string RecipientUser { get; set; }
     public int GiftCount { get; set; }
+
+    [Obsolete("Use CumulativeMonths instead.", true)]
+    public int Months => CumulativeMonths;
 }
 
 public class TwitchCheerEvent : TwitchEvent
