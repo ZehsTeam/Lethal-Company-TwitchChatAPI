@@ -4,7 +4,7 @@ using System;
 using System.IO;
 using System.Text;
 
-namespace com.github.zehsteam.TwitchChatAPI.Objects;
+namespace TwitchChatAPI.Objects;
 
 internal class JsonSave
 {
@@ -25,16 +25,16 @@ internal class JsonSave
     {
         if (_data == null)
         {
-            Plugin.Logger.LogError($"KeyExists: Data is null. Ensure the save file is properly loaded.");
+            Logger.LogError($"KeyExists: Data is null. Ensure the save file is properly loaded.");
             return false;
         }
 
         return _data.ContainsKey(key);
     }
 
-    public T LoadValue<T>(string key, T defaultValue = default)
+    public T Load<T>(string key, T defaultValue = default, bool readFile = false)
     {
-        if (TryLoadValue(key, out T value))
+        if (TryLoad(key, out T value, readFile))
         {
             return value;
         }
@@ -42,13 +42,18 @@ internal class JsonSave
         return defaultValue;
     }
 
-    public bool TryLoadValue<T>(string key, out T value)
+    public bool TryLoad<T>(string key, out T value, bool readFile = false)
     {
         value = default;
 
+        if (readFile)
+        {
+            _data = ReadFile();
+        }
+
         if (_data == null)
         {
-            Plugin.Logger.LogError($"LoadValue: Data is null. Returning default value for key: {key}.");
+            Logger.LogError($"Load: Data is null. Returning default value for key: {key}.");
             return false;
         }
 
@@ -61,29 +66,29 @@ internal class JsonSave
             }
             catch (JsonException ex)
             {
-                Plugin.Logger.LogError($"LoadValue: JSON Conversion Error for key: {key}. {ex.Message}");
+                Logger.LogError($"Load: JSON Conversion Error for key: {key}. {ex.Message}");
             }
             catch (ArgumentNullException ex)
             {
-                Plugin.Logger.LogError($"LoadValue: Argument Null Error for key: {key}. {ex.Message}");
+                Logger.LogError($"Load: Argument Null Error for key: {key}. {ex.Message}");
             }
             catch (Exception ex)
             {
-                Plugin.Logger.LogError($"LoadValue: Unexpected Error for key: {key}. {ex.Message}");
+                Logger.LogError($"Load: Unexpected Error for key: {key}. {ex.Message}");
             }
 
             return false;
         }
 
-        Plugin.Instance.LogWarningExtended($"LoadValue: Key '{key}' does not exist. Returning default value.");
+        Logger.LogWarning($"Load: Key '{key}' does not exist. Returning default value.", extended: true);
         return false;
     }
 
-    public bool SaveValue<T>(string key, T value)
+    public bool Save<T>(string key, T value)
     {
         if (_data == null)
         {
-            Plugin.Logger.LogError($"SaveValue: Data is null. Cannot save key: {key}.");
+            Logger.LogError($"Save: Data is null. Cannot save key: {key}.");
             return false;
         }
 
@@ -104,7 +109,7 @@ internal class JsonSave
         }
         catch (Exception ex)
         {
-            Plugin.Logger.LogError($"SaveValue: Error saving key: {key}. {ex.Message}");
+            Logger.LogError($"Save: Error saving key: {key}. {ex.Message}");
             return false;
         }
     }
@@ -115,7 +120,7 @@ internal class JsonSave
         {
             if (!File.Exists(FilePath))
             {
-                Plugin.Logger.LogWarning($"ReadFile: Save file does not exist at \"{FilePath}\". Initializing with an empty file.");
+                Logger.LogWarning($"ReadFile: Save file does not exist at \"{FilePath}\". Initializing with an empty file.", extended: true);
                 return new JObject();
             }
 
@@ -126,11 +131,11 @@ internal class JsonSave
         }
         catch (JsonException ex)
         {
-            Plugin.Logger.LogError($"ReadFile: JSON Parsing Error for file: \"{FilePath}\". {ex.Message}");
+            Logger.LogError($"ReadFile: JSON Parsing Error for file: \"{FilePath}\". {ex.Message}");
         }
         catch (Exception ex)
         {
-            Plugin.Logger.LogError($"ReadFile: Unexpected Error for file: \"{FilePath}\". {ex.Message}");
+            Logger.LogError($"ReadFile: Unexpected Error for file: \"{FilePath}\". {ex.Message}");
         }
 
         return new JObject();
@@ -151,7 +156,7 @@ internal class JsonSave
         }
         catch (Exception ex)
         {
-            Plugin.Logger.LogError($"WriteFile: Unexpected Error for file: \"{FilePath}\". {ex.Message}");
+            Logger.LogError($"WriteFile: Unexpected Error for file: \"{FilePath}\". {ex.Message}");
         }
 
         return false;

@@ -1,11 +1,11 @@
-﻿using com.github.zehsteam.TwitchChatAPI.Objects;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
+using TwitchChatAPI.Objects;
 using UnityEngine;
 
-namespace com.github.zehsteam.TwitchChatAPI.Helpers;
+namespace TwitchChatAPI.Helpers;
 
 internal static class UserHelper
 {
@@ -97,5 +97,19 @@ internal static class UserHelper
 
         // Update last seen time
         TimeLastSeen[twitchUser.UserId] = Time.realtimeSinceStartup;
+    }
+
+    public static bool IsValidUsername(string username)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return false;
+        }
+
+        // Must be 4–25 characters long
+        // Can contain uppercase/lowercase letters, numbers, underscores
+        // Cannot start with an underscore
+        var regex = new Regex(@"^[A-Za-z0-9][A-Za-z0-9_]{3,24}$");
+        return regex.IsMatch(username) && !username.StartsWith("_");
     }
 }

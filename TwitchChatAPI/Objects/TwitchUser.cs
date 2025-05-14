@@ -1,13 +1,25 @@
 ﻿using System;
 
-namespace com.github.zehsteam.TwitchChatAPI.Objects;
+namespace TwitchChatAPI.Objects;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 public struct TwitchUser : IEquatable<TwitchUser>
 {
     public string UserId { get; set; }
+
+    /// <summary>
+    /// Same as <see cref="DisplayName"/> but in all lowercase.
+    /// </summary>
     public string Username { get; set; }
+
+    /// <summary>
+    /// Same as <see cref="Username"/> but with capitalization.
+    /// </summary>
     public string DisplayName { get; set; }
+
+    /// <summary>
+    /// The name color. HEX color code that starts with a # (Example: #FFFFFF)
+    /// </summary>
     public string Color { get; set; }
     public bool IsVIP { get; set; }
     public bool IsSubscriber { get; set; }
@@ -29,7 +41,6 @@ public struct TwitchUser : IEquatable<TwitchUser>
         return UserId?.GetHashCode() ?? 0;
     }
 
-    // Overriding == and != operators
     public static bool operator ==(TwitchUser left, TwitchUser right)
     {
         return left.Equals(right);

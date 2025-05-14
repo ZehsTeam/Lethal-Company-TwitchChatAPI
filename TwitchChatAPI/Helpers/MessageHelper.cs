@@ -1,11 +1,12 @@
-﻿using com.github.zehsteam.TwitchChatAPI.Enums;
-using com.github.zehsteam.TwitchChatAPI.Objects;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using TwitchChatAPI.Enums;
+using TwitchChatAPI.Objects;
 
-namespace com.github.zehsteam.TwitchChatAPI.Helpers;
+namespace TwitchChatAPI.Helpers;
 
 internal static class MessageHelper
 {
@@ -27,12 +28,12 @@ internal static class MessageHelper
             }
             else
             {
-                Plugin.Instance.LogInfoExtended($"Unhandled RAW message: {message}");
+                Logger.LogInfo($"Unhandled RAW message: {message}", extended: true);
             }
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            Plugin.Logger.LogError($"Failed to process message:\n\n{message}\n\nError: {ex}");
+            Logger.LogError($"Failed to process message:\n\n{message}\n\nError: {ex}");
         }
     }
 
@@ -47,7 +48,7 @@ internal static class MessageHelper
             );
 
             string contentSection = message.Split("PRIVMSG")[1];
-            string channel = contentSection.Split(' ', System.StringSplitOptions.RemoveEmptyEntries)[0].Trim().TrimStart('#');
+            string channel = contentSection.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0].Trim().TrimStart('#');
             string chatMessage = string.Empty;
 
             int indexOfColon = contentSection.IndexOf(':');
@@ -79,9 +80,9 @@ internal static class MessageHelper
 
             API.InvokeOnMessage(twitchMessage);
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            Plugin.Logger.LogError($"Failed to process PRIVMSG message:\n\n{message}\n\nError: {ex}");
+            Logger.LogError($"Failed to process PRIVMSG message:\n\n{message}\n\nError: {ex}");
         }
     }
 
@@ -110,14 +111,14 @@ internal static class MessageHelper
                 CheerAmount = int.Parse(tags.GetValueOrDefault("bits", "0"))
             };
 
-            Plugin.Instance.LogInfoExtended($"RAW cheer message: {message}");
-            Plugin.Instance.LogInfoExtended($"[!] Cheer event: {cheerEvent.User.DisplayName} cheered {cheerEvent.CheerAmount} bits!\n{JsonConvert.SerializeObject(cheerEvent, Formatting.Indented)}");
+            Logger.LogInfo($"RAW cheer message: {message}", extended: true);
+            Logger.LogInfo($"[!] Cheer event: {cheerEvent.User.DisplayName} cheered {cheerEvent.CheerAmount} bits!\n{JsonConvert.SerializeObject(cheerEvent, Formatting.Indented)}", extended: true);
 
             API.InvokeOnCheer(cheerEvent);
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            Plugin.Logger.LogError($"Failed to process PRIVMSG message:\n\n{message}\n\nError: {ex}");
+            Logger.LogError($"Failed to process PRIVMSG message:\n\n{message}\n\nError: {ex}");
         }
     }
 
@@ -135,12 +136,12 @@ internal static class MessageHelper
 
             if (string.IsNullOrEmpty(msgId))
             {
-                Plugin.Logger.LogError($"Failed to process USERNOTICE message:\n\n{message}");
+                Logger.LogError($"Failed to process USERNOTICE message:\n\n{message}");
                 return;
             }
 
             string contentSection = message.Split("USERNOTICE")[1];
-            string channel = contentSection.Split(' ', System.StringSplitOptions.RemoveEmptyEntries)[0].Trim().TrimStart('#');
+            string channel = contentSection.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0].Trim().TrimStart('#');
             string chatMessage = string.Empty;
 
             int indexOfColon = contentSection.IndexOf(':');
@@ -164,12 +165,12 @@ internal static class MessageHelper
             }
             else
             {
-                Plugin.Instance.LogInfoExtended($"Unhandled USERNOTICE message: {message}");
+                Logger.LogInfo($"Unhandled USERNOTICE message: {message}", extended: true);
             }
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            Plugin.Logger.LogError($"Failed to process USERNOTICE message:\n\n{message}\n\nError: {ex}");
+            Logger.LogError($"Failed to process USERNOTICE message:\n\n{message}\n\nError: {ex}");
         }
     }
 
@@ -181,7 +182,7 @@ internal static class MessageHelper
 
             if (string.IsNullOrEmpty(msgId))
             {
-                Plugin.Logger.LogError($"Failed to process USERNOTICE message: {message}");
+                Logger.LogError($"Failed to process USERNOTICE message: {message}");
                 return;
             }
 
@@ -202,11 +203,9 @@ internal static class MessageHelper
 
             if (subType == SubType.SubGift && tags.ContainsKey("msg-param-community-gift-id"))
             {
-                Plugin.Instance.LogInfoExtended($"Skipping subgift since it originates from a submysterygift. Message: {message}");
+                Logger.LogInfo($"Skipping subgift since it originates from a submysterygift. Message: {message}", extended: true);
                 return;
             }
-
-            bool isPrime = false;
 
             SubTier tier = SubTier.One;
 
@@ -214,7 +213,11 @@ internal static class MessageHelper
             {
                 if (subPlan == "Prime")
                 {
-                    isPrime = true;
+                    tier = SubTier.Prime;
+                }
+                else if (subPlan == "1000")
+                {
+                    tier = SubTier.One;
                 }
                 else if (subPlan == "2000")
                 {
@@ -232,22 +235,21 @@ internal static class MessageHelper
                 User = twitchUser,
                 Message = chatMessage,
                 Tags = tags,
-                SubType = subType,
-                IsPrime = isPrime,
+                Type = subType,
                 Tier = tier,
                 CumulativeMonths = int.Parse(tags.GetValueOrDefault("msg-param-cumulative-months", defaultValue: "0")),
                 RecipientUser = tags.GetValueOrDefault("msg-param-recipient-display-name", defaultValue: string.Empty),
                 GiftCount = int.Parse(tags.GetValueOrDefault("msg-param-mass-gift-count", defaultValue: "0"))
             };
 
-            Plugin.Instance.LogInfoExtended($"RAW subscription message: {message}");
-            Plugin.Instance.LogInfoExtended($"[!] Subscription event: \n{JsonConvert.SerializeObject(subEvent, Formatting.Indented)}");
+            Logger.LogInfo($"RAW subscription message: {message}", extended: true);
+            Logger.LogInfo($"[!] Subscription event: \n{JsonConvert.SerializeObject(subEvent, Formatting.Indented)}", extended: true);
 
             API.InvokeOnSub(subEvent);
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            Plugin.Logger.LogError($"Failed to process USERNOTICE message:\n\n{message}\n\nError: {ex}");
+            Logger.LogError($"Failed to process USERNOTICE message:\n\n{message}\n\nError: {ex}");
         }
     }
 
@@ -264,14 +266,14 @@ internal static class MessageHelper
                 ViewerCount = int.Parse(tags.GetValueOrDefault("msg-param-viewerCount", "0"))
             };
 
-            Plugin.Instance.LogInfoExtended($"RAW raid message: {message}");
-            Plugin.Instance.LogInfoExtended($"[!] Raid detected: {raidEvent.User.DisplayName} is raiding with {raidEvent.ViewerCount} viewers!\n{JsonConvert.SerializeObject(raidEvent, Formatting.Indented)}");
+            Logger.LogInfo($"RAW raid message: {message}", extended: true);
+            Logger.LogInfo($"[!] Raid detected: {raidEvent.User.DisplayName} is raiding with {raidEvent.ViewerCount} viewers!\n{JsonConvert.SerializeObject(raidEvent, Formatting.Indented)}", extended: true);
 
             API.InvokeOnRaid(raidEvent);
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            Plugin.Logger.LogError($"Failed to process USERNOTICE message:\n\n{message}\n\nError: {ex}");
+            Logger.LogError($"Failed to process USERNOTICE message:\n\n{message}\n\nError: {ex}");
         }
     }
 
@@ -298,14 +300,14 @@ internal static class MessageHelper
                 Tags = tags
             };
 
-            Plugin.Instance.LogInfoExtended($"RAW roomstate message: {message}");
-            Plugin.Instance.LogInfoExtended($"[!] Room state change detected: \n{JsonConvert.SerializeObject(roomState, Formatting.Indented)}");
+            Logger.LogInfo($"RAW roomstate message: {message}", extended: true);
+            Logger.LogInfo($"[!] Room state change detected: \n{JsonConvert.SerializeObject(roomState, Formatting.Indented)}", extended: true);
 
             API.InvokeOnRoomStateUpdate(roomState);
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            Plugin.Logger.LogError($"Failed to process ROOMSTATE message:\n\n{message}\n\nError: {ex}");
+            Logger.LogError($"Failed to process ROOMSTATE message:\n\n{message}\n\nError: {ex}");
         }
     }
 
@@ -331,12 +333,12 @@ internal static class MessageHelper
                 IsVIP = tags.TryGetValue("vip", out var vip) && vip == "1",
                 IsSubscriber = tags.TryGetValue("subscriber", out var sub) && sub == "1",
                 IsModerator = tags.TryGetValue("mod", out var mod) && mod == "1",
-                IsBroadcaster = displayName.Equals(channel, System.StringComparison.OrdinalIgnoreCase)
+                IsBroadcaster = displayName.Equals(channel, StringComparison.OrdinalIgnoreCase)
             };
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            Plugin.Logger.LogError($"Failed to get TwitchUser: {ex}");
+            Logger.LogError($"Failed to get TwitchUser: {ex}");
             return default;
         }
     }

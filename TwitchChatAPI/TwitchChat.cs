@@ -1,21 +1,21 @@
-﻿using com.github.zehsteam.TwitchChatAPI.Enums;
-using com.github.zehsteam.TwitchChatAPI.Helpers;
-using com.github.zehsteam.TwitchChatAPI.MonoBehaviours;
+﻿using System;
 using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using TwitchChatAPI.Enums;
+using TwitchChatAPI.Helpers;
 using UnityEngine;
 
-namespace com.github.zehsteam.TwitchChatAPI;
+namespace TwitchChatAPI;
 
 internal static class TwitchChat
 {
     public const string ServerIP = "irc.chat.twitch.tv";
     public const int ServerPort = 6667;
 
-    public static bool Enabled => Plugin.ConfigManager.TwitchChat_Enabled.Value;
-    public static string Channel => $"#{Plugin.ConfigManager.TwitchChat_Channel.Value}".Trim();
+    public static bool Enabled => ConfigManager.TwitchChat_Enabled.Value;
+    public static string Channel => ConfigManager.TwitchChat_Channel.Value.Trim();
 
     public static ConnectionState ConnectionState
     {
@@ -23,7 +23,7 @@ internal static class TwitchChat
         private set
         {
             _connectionState = value;
-            PluginCanvas.Instance?.UpdateSettingsWindowConnectionStatus();
+            API.InvokeOnConnectionStateChanged(_connectionState);
         }
     }
 
@@ -44,7 +44,7 @@ internal static class TwitchChat
     private static readonly object _connectionLock = new object();
     private static readonly SemaphoreSlim _readLock = new SemaphoreSlim(1, 1);
 
-    static TwitchChat()
+    public static void Initialize()
     {
         Application.quitting += OnApplicationQuit;
     }
@@ -52,6 +52,12 @@ internal static class TwitchChat
     public static void Connect()
     {
         Task.Run(ConnectAsync);
+    }
+
+    public static void Connect(string channel)
+    {
+        ConfigManager.TwitchChat_Channel.Value = channel;
+        Connect();
     }
 
     public static async Task ConnectAsync()
@@ -69,13 +75,13 @@ internal static class TwitchChat
 
         if (!Enabled)
         {
-            Plugin.Logger.LogError("Failed to connect to Twitch chat. Twitch chat has been disabled in the config settings.");
+            Logger.LogError("Failed to connect to Twitch chat. Twitch chat has been disabled in the config settings.");
             return;
         }
 
         if (ConnectionState == ConnectionState.Connecting)
         {
-            Plugin.Logger.LogWarning("Twitch chat is already connecting.");
+            Logger.LogWarning("Twitch chat is already connecting.");
             return;
         }
 
@@ -84,13 +90,13 @@ internal static class TwitchChat
             Disconnect();
         }
         
-        if (string.IsNullOrWhiteSpace(Channel) || Channel == "#")
+        if (!UserHelper.IsValidUsername(Channel))
         {
-            Plugin.Logger.LogWarning("Failed to start Twitch chat connection: Invalid or empty channel name.");
+            Logger.LogWarning("Failed to start Twitch chat connection: Invalid or empty channel name.");
             return;
         }
 
-        Plugin.Logger.LogInfo("Establishing connection to Twitch chat...");
+        Logger.LogInfo("Establishing connection to Twitch chat...");
 
         ConnectionState = ConnectionState.Connecting;
 
@@ -110,23 +116,23 @@ internal static class TwitchChat
             await _writer.WriteLineAsync("CAP REQ :twitch.tv/tags"); // Request metadata tags
             await _writer.WriteLineAsync("CAP REQ :twitch.tv/commands"); // Request events
             //await _writer.WriteLineAsync("CAP REQ :twitch.tv/membership"); // Request join and part messages
-            await _writer.WriteLineAsync($"JOIN {Channel}");
+            await _writer.WriteLineAsync($"JOIN #{Channel}");
 
             ConnectionState = ConnectionState.Connected;
             _explicitDisconnect = false;
 
-            Plugin.Logger.LogInfo($"Successfully connected to Twitch chat {Channel}.");
+            Logger.LogInfo($"Successfully connected to Twitch chat {Channel}.");
 
             API.InvokeOnConnect();
 
             await Task.Run(ListenAsync, _cts.Token);
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             ConnectionState = ConnectionState.Disconnected;
             _explicitDisconnect = false;
 
-            Plugin.Logger.LogError($"Failed to connect to Twitch chat {Channel}. {ex}");
+            Logger.LogError($"Failed to connect to Twitch chat {Channel}. {ex}");
 
             ScheduleReconnect();
         }
@@ -141,7 +147,7 @@ internal static class TwitchChat
 
             if (ConnectionState != ConnectionState.Connected && ConnectionState != ConnectionState.Connecting)
             {
-                Plugin.Logger.LogInfo("Twitch chat is not connected or already disconnecting.");
+                Logger.LogInfo("Twitch chat is not connected or already disconnecting.");
                 return;
             }
 
@@ -153,7 +159,7 @@ internal static class TwitchChat
 
             ConnectionState = ConnectionState.Disconnected;
 
-            Plugin.Logger.LogInfo("Twitch chat connection stopped.");
+            Logger.LogInfo("Twitch chat connection stopped.");
 
             API.InvokeOnDisconnect();
         }
@@ -181,7 +187,7 @@ internal static class TwitchChat
                 return;
             }
 
-            Plugin.Logger.LogInfo($"Reconnection to Twitch chat will be attempted in {_reconnectDelay / 1000} seconds.");
+            Logger.LogInfo($"Reconnection to Twitch chat will be attempted in {_reconnectDelay / 1000} seconds.");
 
             _isReconnecting = true;
 
@@ -197,7 +203,7 @@ internal static class TwitchChat
 
                 if (!Enabled) return;
 
-                Plugin.Logger.LogInfo("Attempting to reconnect to Twitch chat...");
+                Logger.LogInfo("Attempting to reconnect to Twitch chat...");
                 await ConnectAsync();
             });
         }
@@ -238,7 +244,7 @@ internal static class TwitchChat
 
                 if (message.StartsWith("PING"))
                 {
-                    Plugin.Instance.LogInfoExtended("Received PING, sending PONG...");
+                    Logger.LogInfo("Received PING, sending PONG...", extended: true);
                     await (_writer?.WriteLineAsync("PONG :tmi.twitch.tv") ?? Task.CompletedTask).ConfigureAwait(false);
                 }
                 else
@@ -249,15 +255,15 @@ internal static class TwitchChat
         }
         catch (TaskCanceledException)
         {
-            Plugin.Logger.LogInfo("Twitch chat listen task canceled.");
+            Logger.LogInfo("Twitch chat listen task canceled.");
         }
-        catch (System.OperationCanceledException)
+        catch (OperationCanceledException)
         {
-            Plugin.Logger.LogInfo("Twitch chat listen task canceled.");
+            Logger.LogInfo("Twitch chat listen task canceled.");
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            Plugin.Logger.LogError($"Twitch chat listen task failed. {ex}");
+            Logger.LogError($"Twitch chat listen task failed. {ex}");
 
             ScheduleReconnect();
         }
@@ -290,7 +296,7 @@ internal static class TwitchChat
             else
             {
                 // Task.Delay was completed, meaning cancellation was requested
-                throw new System.OperationCanceledException(cancellationToken);
+                throw new OperationCanceledException(cancellationToken);
             }
         }
         finally
@@ -301,7 +307,27 @@ internal static class TwitchChat
 
     private static void OnApplicationQuit()
     {
-        Plugin.Logger.LogInfo("Application is quitting. Disconnecting Twitch chat...");
+        Logger.LogInfo("Application is quitting. Disconnecting Twitch chat...");
         Disconnect();
+    }
+
+    public static void HandleEnabledChanged()
+    {
+        if (Enabled)
+        {
+            Connect();
+        }
+        else
+        {
+            Disconnect();
+        }
+    }
+
+    public static void HandleChannelChanged()
+    {
+        if (Enabled)
+        {
+            Connect();
+        }
     }
 }

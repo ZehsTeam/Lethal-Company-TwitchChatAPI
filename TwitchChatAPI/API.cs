@@ -1,18 +1,31 @@
-﻿using com.github.zehsteam.TwitchChatAPI.Enums;
-using com.github.zehsteam.TwitchChatAPI.Helpers;
-using com.github.zehsteam.TwitchChatAPI.MonoBehaviours;
-using com.github.zehsteam.TwitchChatAPI.Objects;
+﻿using TwitchChatAPI.Enums;
+using TwitchChatAPI.Helpers;
+using TwitchChatAPI.MonoBehaviours;
+using TwitchChatAPI.Objects;
 using System;
 using System.Collections.Generic;
 
-namespace com.github.zehsteam.TwitchChatAPI;
+namespace TwitchChatAPI;
 
+/// <summary>
+/// API for TwitchChatAPI.
+/// </summary>
 public static class API
 {
+    /// <summary>
+    /// The current Twitch channel username.
+    /// </summary>
+    public static string Channel => TwitchChat.Channel;
+
     /// <summary>
     /// Represents the current connection state to Twitch chat.
     /// </summary>
     public static ConnectionState ConnectionState => TwitchChat.ConnectionState;
+
+    /// <summary>
+    /// Invoked when the connection state to Twitch chat is changed.
+    /// </summary>
+    public static event Action<ConnectionState> OnConnectionStateChanged;
 
     /// <summary>
     /// Invoked when the connection to Twitch chat is established.
@@ -50,9 +63,34 @@ public static class API
     public static event Action<TwitchRoomState> OnRoomStateUpdate;
 
     /// <summary>
-    /// Gets the list of all known Twitch users.
+    /// Gets the list of all Twitch users that have had activity in the chat since this mod has been connected.
     /// </summary>
     public static IReadOnlyCollection<TwitchUser> Users => UserHelper.Users.Values;
+
+    /// <summary>
+    /// Connect to Twitch chat. Uses the channel specified in the config settings.
+    /// </summary>
+    public static void Connect()
+    {
+        TwitchChat.Connect();
+    }
+
+    /// <summary>
+    /// Connect to Twitch chat. Uses the channel specified. This will update the channel in the config settings.
+    /// </summary>
+    /// <param name="channel"></param>
+    public static void Connect(string channel)
+    {
+        TwitchChat.Connect(channel);
+    }
+
+    /// <summary>
+    /// Disconnect from Twitch chat.
+    /// </summary>
+    public static void Disconnect()
+    {
+        TwitchChat.Disconnect();
+    }
 
     /// <summary>
     /// Attempts to retrieve a Twitch user by their username or display name.
@@ -87,6 +125,11 @@ public static class API
     }
 
     #region Internal Event Invocation
+    internal static void InvokeOnConnectionStateChanged(ConnectionState state)
+    {
+        MainThreadDispatcher.Enqueue(() => OnConnectionStateChanged?.Invoke(state));
+    }
+
     internal static void InvokeOnConnect()
     {
         MainThreadDispatcher.Enqueue(() => OnConnect?.Invoke());
