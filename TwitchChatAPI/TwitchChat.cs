@@ -22,8 +22,11 @@ internal static class TwitchChat
         get => _connectionState;
         private set
         {
-            _connectionState = value;
-            API.InvokeOnConnectionStateChanged(_connectionState);
+            if (_connectionState != value)
+            {
+                _connectionState = value;
+                API.InvokeOnConnectionStateChanged(_connectionState);
+            }
         }
     }
 
