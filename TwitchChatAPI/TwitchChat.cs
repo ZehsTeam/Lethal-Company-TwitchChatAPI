@@ -50,6 +50,11 @@ internal static class TwitchChat
     public static void Initialize()
     {
         Application.quitting += OnApplicationQuit;
+
+        if (Enabled)
+        {
+            Connect();
+        }
     }
     
     public static void Connect()

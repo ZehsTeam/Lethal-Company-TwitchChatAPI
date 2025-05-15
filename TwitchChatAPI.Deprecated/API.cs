@@ -19,9 +19,9 @@ namespace com.github.zehsteam.TwitchChatAPI;
 [Obsolete(ObsoleteMessage, error: true)]
 public static class API
 {
-    internal const string ObsoleteMessage = "You are using the old TwitchChatAPI namespace! Switch to \"using TwitchChatAPI;\".";
+    internal const string ObsoleteMessage = "You are using the deprecated version of TwitchChatAPI. You need to reference the new TwitchChatAPI.dll, update your BepInDependency to use the new GUID, and use the new namespaces.";
 
-    public static ConnectionState ConnectionState => Converter.Convert<ConnectionState>(NewAPI.ConnectionState);
+    public static ConnectionState ConnectionState => Converter.Convert(NewAPI.ConnectionState, ConnectionState.None);
 
     public static event Action OnConnect;
     public static event Action OnDisconnect;
@@ -58,9 +58,18 @@ public static class API
 
     public static bool TryGetUserByUsername(string username, out TwitchUser twitchUser)
     {
-        if (NewAPI.TryGetUserByUsername(username, out var newTwitchUser))
+        if (NewAPI.TryGetUserByUsername(username, out NewTwitchUser newTwitchUser))
         {
-            twitchUser = Converter.Convert<TwitchUser>(newTwitchUser);
+            if (Converter.TryConvert(newTwitchUser, out twitchUser))
+            {
+                return true;
+            }
+            else
+            {
+                Logger.LogWarning($"[Deprecated] API: Failed to get TwitchUser by Username. Could not convert TwitchUser.", extended: true);
+            }
+
+            twitchUser = default;
             return true;
         }
         else
@@ -72,9 +81,18 @@ public static class API
 
     public static bool TryGetUserByUserId(string userId, out TwitchUser twitchUser)
     {
-        if (NewAPI.TryGetUserByUserId(userId, out var newTwitchUser))
+        if (NewAPI.TryGetUserByUserId(userId, out NewTwitchUser newTwitchUser))
         {
-            twitchUser = Converter.Convert<TwitchUser>(newTwitchUser);
+            if (Converter.TryConvert(newTwitchUser, out twitchUser))
+            {
+                return true;
+            }
+            else
+            {
+                Logger.LogWarning($"[Deprecated] API: Failed to get TwitchUser by UserId. Could not convert TwitchUser.", extended: true);
+            }
+
+            twitchUser = default;
             return true;
         }
         else
@@ -100,29 +118,89 @@ public static class API
         OnDisconnect?.Invoke();
     }
 
-    internal static void InvokeOnMessage(NewTwitchMessage message)
+    internal static void InvokeOnMessage(NewTwitchMessage newMessage)
     {
-        OnMessage?.Invoke(Converter.Convert<TwitchMessage>(message));
+        if (OnMessage == null)
+        {
+            return;
+        }
+
+        if (Converter.TryConvert<TwitchMessage>(newMessage, out var message))
+        {
+            OnMessage?.Invoke(message);
+        }
+        else
+        {
+            Logger.LogWarning($"[Deprecated] API: Failed to invoke OnMessage. Could not convert TwitchMessage.", extended: true);
+        }
     }
 
-    internal static void InvokeOnCheer(NewTwitchCheerEvent cheerEvent)
+    internal static void InvokeOnCheer(NewTwitchCheerEvent newCheerEvent)
     {
-        OnCheer?.Invoke(Converter.Convert<TwitchCheerEvent>(cheerEvent));
+        if (OnCheer == null)
+        {
+            return;
+        }
+
+        if (Converter.TryConvert<TwitchCheerEvent>(newCheerEvent, out var cheerEvent))
+        {
+            OnCheer?.Invoke(cheerEvent);
+        }
+        else
+        {
+            Logger.LogWarning($"[Deprecated] API: Failed to invoke OnCheer. Could not convert TwitchCheerEvent.", extended: true);
+        }
     }
 
-    internal static void InvokeOnSub(NewTwitchSubEvent subEvent)
+    internal static void InvokeOnSub(NewTwitchSubEvent newSubEvent)
     {
-        OnSub?.Invoke(Converter.Convert<TwitchSubEvent>(subEvent));
+        if (OnSub == null)
+        {
+            return;
+        }
+
+        if (Converter.TryConvert<TwitchSubEvent>(newSubEvent, out var subEvent))
+        {
+            OnSub?.Invoke(subEvent);
+        }
+        else
+        {
+            Logger.LogWarning($"[Deprecated] API: Failed to invoke OnSub. Could not convert TwitchSubEvent.", extended: true);
+        }
     }
 
-    internal static void InvokeOnRaid(NewTwitchRaidEvent raidEvent)
+    internal static void InvokeOnRaid(NewTwitchRaidEvent newRaidEvent)
     {
-        OnRaid?.Invoke(Converter.Convert<TwitchRaidEvent>(raidEvent));
+        if (OnRaid == null)
+        {
+            return;
+        }
+
+        if (Converter.TryConvert<TwitchRaidEvent>(newRaidEvent, out var raidEvent))
+        {
+            OnRaid?.Invoke(raidEvent);
+        }
+        else
+        {
+            Logger.LogWarning($"[Deprecated] API: Failed to invoke OnRaid. Could not convert TwitchRaidEvent.", extended: true);
+        }
     }
 
-    internal static void InvokeOnRoomStateUpdate(NewTwitchRoomState roomState)
+    internal static void InvokeOnRoomStateUpdate(NewTwitchRoomState newRoomState)
     {
-        OnRoomStateUpdate?.Invoke(Converter.Convert<TwitchRoomState>(roomState));
+        if (OnRoomStateUpdate == null)
+        {
+            return;
+        }
+
+        if (Converter.TryConvert<TwitchRoomState>(newRoomState, out var roomState))
+        {
+            OnRoomStateUpdate?.Invoke(roomState);
+        }
+        else
+        {
+            Logger.LogWarning($"[Deprecated] API: Failed to invoke OnRoomStateUpdate. Could not convert TwitchRoomState.", extended: true);
+        }
     }
     #endregion
 }

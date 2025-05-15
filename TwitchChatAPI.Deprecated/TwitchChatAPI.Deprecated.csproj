@@ -49,7 +49,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <Reference Include="TwitchChatAPI"><HintPath>$(GalePluginFolder)\TwitchChatAPI.dll</HintPath></Reference>
+    <Reference Include="TwitchChatAPI" Publicize="true"><HintPath>$(GalePluginFolder)\TwitchChatAPI.dll</HintPath></Reference>
   </ItemGroup>
   
   <!-- EDIT THESE SETTINGS -->
