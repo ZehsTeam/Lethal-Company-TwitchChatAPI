@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.12.35527.113 d17.12
+VisualStudioVersion = 17.12.35527.113
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchChatAPI", "TwitchChatAPI\TwitchChatAPI.csproj", "{49A5F1AF-1344-4BAD-9E54-AC102D2BE9C8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchChatAPI.Deprecated", "TwitchChatAPI.Deprecated\TwitchChatAPI.Deprecated.csproj", "{BE86CBDF-4A66-4A94-B447-934136DEA2B3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,8 +17,15 @@ Global
 		{49A5F1AF-1344-4BAD-9E54-AC102D2BE9C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{49A5F1AF-1344-4BAD-9E54-AC102D2BE9C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{49A5F1AF-1344-4BAD-9E54-AC102D2BE9C8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE86CBDF-4A66-4A94-B447-934136DEA2B3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE86CBDF-4A66-4A94-B447-934136DEA2B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE86CBDF-4A66-4A94-B447-934136DEA2B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE86CBDF-4A66-4A94-B447-934136DEA2B3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C1F7BF8B-B308-4233-8B43-BDF8AA002A94}
 	EndGlobalSection
 EndGlobal
