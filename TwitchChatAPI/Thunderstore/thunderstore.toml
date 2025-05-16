@@ -31,7 +31,6 @@ source = "../../LICENSE.txt"
 target = "/"
 
 [publish]
-categories = [ "mods", "libraries", "misc", ]
 communities = [ "lethal-company", "repo", ]
 [publish.categories]
 lethal-company = [ "mods", "libraries", "misc", "client-side", ]
