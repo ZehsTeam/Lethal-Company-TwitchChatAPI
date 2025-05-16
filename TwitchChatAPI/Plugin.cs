@@ -13,7 +13,7 @@ public class Plugin : BaseUnityPlugin
 
     internal static new ConfigFile Config { get; private set; }
 
-    //internal static JsonSave GlobalSave { get; private set; }
+    internal static JsonSave GlobalSave { get; private set; }
 
     #pragma warning disable IDE0051 // Remove unused private members
     private void Awake()
@@ -26,7 +26,7 @@ public class Plugin : BaseUnityPlugin
 
         Config = Utils.CreateGlobalConfigFile(this);
 
-        //GlobalSave = new JsonSave(Utils.GetPluginPersistentDataPath(), "GlobalSave");
+        GlobalSave = new JsonSave(Utils.GetPluginPersistentDataPath(), "GlobalSave");
 
         ConfigManager.Initialize(Config);
         MainThreadDispatcher.Initialize();

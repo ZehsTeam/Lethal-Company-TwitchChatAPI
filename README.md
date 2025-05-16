@@ -1,7 +1,9 @@
 # TwitchChatAPI
 
+[![GitHub](https://img.shields.io/badge/GitHub-TwitchChatAPI-brightgreen?style=for-the-badge&logo=GitHub)](https://github.com/ZehsTeam/TwitchChatAPI)
 [![Thunderstore Version](https://img.shields.io/thunderstore/v/Zehs/TwitchChatAPI?style=for-the-badge&logo=thunderstore&logoColor=white)](https://thunderstore.io/c/lethal-company/p/Zehs/TwitchChatAPI/)
 [![Thunderstore Downloads](https://img.shields.io/thunderstore/dt/Zehs/TwitchChatAPI?style=for-the-badge&logo=thunderstore&logoColor=white)](https://thunderstore.io/c/lethal-company/p/Zehs/TwitchChatAPI/)
+[![NuGet Version](https://img.shields.io/nuget/v/zehs.twitchchatapi?style=for-the-badge&logo=nuget)](https://www.nuget.org/packages/Zehs.TwitchChatAPI)
 
 **Add Twitch chat integration to your Unity game mods! Subscribe to events like Messages, Cheers, Subs, and Raids. No Twitch authentication or connections required.**
 

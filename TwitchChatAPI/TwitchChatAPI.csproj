@@ -7,14 +7,28 @@
     
     <AssemblyName>$(MSBuildProjectName)</AssemblyName> <!-- PLUGIN_GUID -->
     <Product>$(MSBuildProjectName)</Product>           <!-- PLUGIN_NAME -->
-    <Version>2.0.0</Version>                           <!-- PLUGIN_VERSION -->
+    <!-- <Version/> is handled by MinVer with Git tags -->
     <Authors>Zehs</Authors>
-    <Description></Description>
+    <Description>Add Twitch chat integration to your Unity game mods! Subscribe to events like Messages, Cheers, Subs, and Raids. No Twitch authentication or connections required.</Description>
+    <PackageTags>unity, bepinex, modding, twitch, twitch-irc, irc, irc-client</PackageTags>
     <Copyright>Copyright © 2025 Zehs</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/ZehsTeam/TwitchChatAPI</RepositoryUrl>
+    <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <RequireLicenseAcceptance>false</RequireLicenseAcceptance>
     
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
     
+    <IsPackable>true</IsPackable>
+    <PackageId>Zehs.$(AssemblyName)</PackageId>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    
+    <!-- See: https://learn.microsoft.com/en-us/dotnet/csharp/nullable-references -->
+    <!--<Nullable>enable</Nullable>-->
     
     <DebugSymbols>true</DebugSymbols>
     <DebugType>embedded</DebugType>
@@ -29,6 +43,14 @@
     </RestoreAdditionalProjectSources>
   </PropertyGroup>
   
+  <!-- Target 'AddGeneratedFile' is from BepInEx.PluginInfoProps (and our version which includes member documentation) -->
+  <Target Name="SetPluginVersion" BeforeTargets="AddGeneratedFile" DependsOnTargets="MinVer">
+    <PropertyGroup>
+      <PlainVersion>$(MinVerMajor).$(MinVerMinor).$(MinVerPatch)</PlainVersion>
+      <BepInExPluginVersion>$(PlainVersion)</BepInExPluginVersion>
+    </PropertyGroup>
+  </Target>
+  
   <Target Name="ClearReferenceCopyLocalPaths" AfterTargets="ResolveAssemblyReferences">
     <ItemGroup>
       <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" />
@@ -40,6 +62,11 @@
   </ItemGroup>
   
   <ItemGroup>
+    <None Include="$(ProjectDir)../README.md" Pack="true" PackagePath="/" CopyToPluginOutputDirectory="true" />
+    <None Include="$(ProjectDir)../icon.png" Pack="true" PackagePath="/" CopyToPluginOutputDirectory="true" />
+  </ItemGroup>
+  
+  <ItemGroup>
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.2" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
@@ -47,32 +74,43 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="UnityEngine.Modules" Version="2022.3.21" IncludeAssets="compile" PrivateAssets="all" />
   </ItemGroup>
-
-  <!-- EDIT THESE SETTINGS -->
+  
+  <!-- Import settings from .csproj.user file -->
+  <Import Project="$(MSBuildProjectFile).user" Condition="Exists('$(MSBuildProjectFile).user')" />
+  
+  <!-- Default values in case the .csproj.user file doesn't exist -->
   <PropertyGroup>
-    <!-- Gale profile name -->
-    <GaleProfile>Mod Development</GaleProfile>
-    
-    <!-- Gale data folder -->
-    <GaleDataFolder>$(AppData)\com.kesomannen.gale</GaleDataFolder>
-    
-    <!-- Plugin folder name -->
-    <PluginFolderName>Zehs-$(MSBuildProjectName)</PluginFolderName>
-    
-    <!-- Gale Lethal Company plugins folder -->
-    <GaleLethalCompanyPluginsFolder>$(GaleDataFolder)\lethal-company\profiles\$(GaleProfile)\BepInEx\plugins</GaleLethalCompanyPluginsFolder>
-    
-    <!-- Gale R.E.P.O. plugins folder -->
-    <GaleREPOPluginsFolder>$(GaleDataFolder)\repo\profiles\$(GaleProfile)\BepInEx\plugins</GaleREPOPluginsFolder>
+    <GaleProfile Condition="'$(GaleProfile)' == ''">Mod Development</GaleProfile>
+    <GaleDataFolder Condition="'$(GaleDataFolder)' == ''">$(AppData)\com.kesomannen.gale</GaleDataFolder>
   </PropertyGroup>
   
-  <!-- Copy DLL to Lethal Company -->
-  <Target Name="CopyToLethalCompanyPluginFolder" AfterTargets="PostBuildEvent">
-    <Copy DestinationFolder="$(GaleLethalCompanyPluginsFolder)\$(PluginFolderName)" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" SourceFiles="$(TargetPath)" />
+  <PropertyGroup>
+    <LethalCompanyBepInExPluginsFolder Condition="'$(LethalCompanyBepInExPluginsFolder)' == ''">$(GaleDataFolder)\lethal-company\profiles\$(GaleProfile)\BepInEx\plugins\</LethalCompanyBepInExPluginsFolder>
+    <REPOBepInExPluginsFolder Condition="'$(REPOBepInExPluginsFolder)' == ''">$(GaleDataFolder)\repo\profiles\$(GaleProfile)\BepInEx\plugins\</REPOBepInExPluginsFolder>
+  </PropertyGroup>
+  
+  <!-- Copy DLL to Gale Lethal Company's Zehs-TwitchChatAPI plugin folder -->
+  <Target Name="CopyToPluginsFolder" AfterTargets="PostBuildEvent" Condition="Exists('$(BepInExPluginsFolder)')">
+    <Copy DestinationFolder="$(LethalCompanyBepInExPluginsFolder)Zehs-$(MSBuildProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" SourceFiles="$(TargetPath)" />
   </Target>
   
-  <!-- Copy DLL to R.E.P.O. -->
-  <Target Name="CopyToREPOPluginFolder" AfterTargets="PostBuildEvent">
-    <Copy DestinationFolder="$(GaleREPOPluginsFolder)\$(PluginFolderName)" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" SourceFiles="$(TargetPath)" />
+  <!-- Copy DLL to Gale R.E.P.O.'s Zehs-TwitchChatAPI plugin folder -->
+  <Target Name="CopyToPluginsFolder" AfterTargets="PostBuildEvent" Condition="Exists('$(BepInExPluginsFolder)')">
+    <Copy DestinationFolder="$(REPOBepInExPluginsFolder)Zehs-$(MSBuildProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" SourceFiles="$(TargetPath)" />
+  </Target>
+  
+  <!-- Call with `dotnet build -target:PackThunderstore` -->
+  <Target Name="PackThunderstore" DependsOnTargets="PostBuildEvent;SetPluginVersion">
+    <Exec Command="dotnet tool restore" />
+    <Exec Command="dotnet tcli build --config-path &quot;$(ProjectDir)Thunderstore/thunderstore.toml&quot; --package-version $(PlainVersion)" />
+    <ItemGroup>
+      <FilesToRename Include="$(ProjectDir)dist/*-$(PlainVersion).zip" />
+    </ItemGroup>
+    <Move SourceFiles="@(FilesToRename)" DestinationFiles="@(FilesToRename -&gt; Replace($(PlainVersion), $(MinVerVersion)))" />
+  </Target>
+  
+  <!-- This is manually called by the github actions publish workflow -->
+  <Target Name="PublishThunderstore" DependsOnTargets="PackThunderstore">
+    <Exec Command="dotnet tcli publish --config-path &quot;$(ProjectDir)Thunderstore/thunderstore.toml&quot; --file &quot;$(SolutionDir)artifacts/thunderstore/Zehs-TwitchChatAPI-$(MinVerVersion).zip&quot;" />
   </Target>
 </Project>
