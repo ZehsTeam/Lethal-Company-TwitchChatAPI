@@ -89,16 +89,6 @@
     <REPOBepInExPluginsFolder Condition="'$(REPOBepInExPluginsFolder)' == ''">$(GaleDataFolder)\repo\profiles\$(GaleProfile)\BepInEx\plugins\</REPOBepInExPluginsFolder>
   </PropertyGroup>
   
-  <!-- Copy DLL to Gale Lethal Company's Zehs-TwitchChatAPI plugin folder -->
-  <Target Name="CopyToPluginsFolder" AfterTargets="PostBuildEvent" Condition="Exists('$(BepInExPluginsFolder)')">
-    <Copy DestinationFolder="$(LethalCompanyBepInExPluginsFolder)Zehs-$(MSBuildProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" SourceFiles="$(TargetPath)" />
-  </Target>
-  
-  <!-- Copy DLL to Gale R.E.P.O.'s Zehs-TwitchChatAPI plugin folder -->
-  <Target Name="CopyToPluginsFolder" AfterTargets="PostBuildEvent" Condition="Exists('$(BepInExPluginsFolder)')">
-    <Copy DestinationFolder="$(REPOBepInExPluginsFolder)Zehs-$(MSBuildProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" SourceFiles="$(TargetPath)" />
-  </Target>
-  
   <!-- Call with `dotnet build -target:PackThunderstore` -->
   <Target Name="PackThunderstore" DependsOnTargets="PostBuildEvent;SetPluginVersion">
     <Exec Command="dotnet tool restore" />
