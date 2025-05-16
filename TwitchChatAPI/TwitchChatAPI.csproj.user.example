@@ -2,7 +2,7 @@
   <!-- COPY THIS FILE AND EDIT THESE SETTINGS -->
   <PropertyGroup>
     <!-- Gale profile name -->
-    <GaleProfile>Mod Development</GaleProfile>
+    <GaleProfileName>Mod Development</GaleProfileName>
     
     <!-- Gale data folder -->
     <GaleDataFolder>$(AppData)\com.kesomannen.gale</GaleDataFolder>

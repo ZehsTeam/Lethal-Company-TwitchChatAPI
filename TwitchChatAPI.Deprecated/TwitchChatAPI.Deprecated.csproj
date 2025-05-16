@@ -46,16 +46,13 @@
     <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" PrivateAssets="all" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="UnityEngine.Modules" Version="2022.3.21" IncludeAssets="compile" PrivateAssets="all" />
+    <ProjectReference Include="../TwitchChatAPI/TwitchChatAPI.csproj" Publicize="true" />
   </ItemGroup>
   
-  <ItemGroup>
-    <Reference Include="TwitchChatAPI" Publicize="true" HintPath="./Libraries/TwitchChatAPI.dll" />
-  </ItemGroup>
-
   <!-- EDIT THESE SETTINGS -->
   <PropertyGroup>
     <!-- Gale profile name -->
-    <GaleProfile>Mod Development</GaleProfile>
+    <GaleProfileName>Mod Development</GaleProfileName>
     
     <!-- Gale data folder -->
     <GaleDataFolder>$(AppData)\com.kesomannen.gale</GaleDataFolder>
@@ -64,19 +61,19 @@
     <PluginFolderName>Zehs-TwitchChatAPI</PluginFolderName>
 
     <!-- Gale Lethal Company plugins folder -->
-    <GaleLethalCompanyPluginsFolder>$(GaleDataFolder)\lethal-company\profiles\$(GaleProfile)\BepInEx\plugins</GaleLethalCompanyPluginsFolder>
+    <GaleLethalCompanyPluginsFolder>$(GaleDataFolder)\lethal-company\profiles\$(GaleProfileName)\BepInEx\plugins</GaleLethalCompanyPluginsFolder>
     
     <!-- Gale R.E.P.O. plugins folder -->
-    <GaleREPOPluginsFolder>$(GaleDataFolder)\repo\profiles\$(GaleProfile)\BepInEx\plugins</GaleREPOPluginsFolder>
+    <GaleREPOPluginsFolder>$(GaleDataFolder)\repo\profiles\$(GaleProfileName)\BepInEx\plugins</GaleREPOPluginsFolder>
   </PropertyGroup>
   
   <!-- Copy DLL to Lethal Company -->
-  <Target Name="CopyToLethalCompanyPluginFolder" AfterTargets="PostBuildEvent">
+  <Target Name="CopyToLethalCompanyPluginFolder" AfterTargets="PostBuildEvent" Condition="Exists('$(GaleLethalCompanyPluginsFolder)')">
     <Copy DestinationFolder="$(GaleLethalCompanyPluginsFolder)\$(PluginFolderName)" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" SourceFiles="$(TargetPath)" />
   </Target>
   
   <!-- Copy DLL to R.E.P.O. -->
-  <Target Name="CopyToREPOPluginFolder" AfterTargets="PostBuildEvent">
+  <Target Name="CopyToREPOPluginFolder" AfterTargets="PostBuildEvent" Condition="Exists('$(GaleREPOPluginsFolder)')">
     <Copy DestinationFolder="$(GaleREPOPluginsFolder)\$(PluginFolderName)" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" SourceFiles="$(TargetPath)" />
   </Target>
 </Project>
