@@ -67,6 +67,10 @@
   </ItemGroup>
   
   <ItemGroup>
+    <None Include="$(ProjectDir)..\artifacts\bin\TwitchChatAPI.Deprecated\release\com.github.zehsteam.TwitchChatAPI.dll" Pack="true" PackagePath="lib\netstandard2.1\" />
+  </ItemGroup>
+  
+  <ItemGroup>
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.2" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
@@ -88,6 +92,10 @@
     <LethalCompanyBepInExPluginsFolder Condition="'$(LethalCompanyBepInExPluginsFolder)' == ''">$(GaleDataFolder)\lethal-company\profiles\$(GaleProfileName)\BepInEx\plugins\</LethalCompanyBepInExPluginsFolder>
     <REPOBepInExPluginsFolder Condition="'$(REPOBepInExPluginsFolder)' == ''">$(GaleDataFolder)\repo\profiles\$(GaleProfileName)\BepInEx\plugins\</REPOBepInExPluginsFolder>
   </PropertyGroup>
+  
+  <Target Name="BuildDeprecatedBeforePacking" BeforeTargets="PrepareForPacking">
+    <MSBuild Projects="..\TwitchChatAPI.Deprecated\TwitchChatAPI.Deprecated.csproj" Targets="Build" Properties="Configuration=$(Configuration);Platform=$(Platform)" BuildInParallel="false" />
+  </Target>
   
   <!-- Copy DLL to Gale Lethal Company's Zehs-TwitchChatAPI plugin folder -->
   <Target Name="CopyToLethalCompanyPluginFolder" AfterTargets="PostBuildEvent" Condition="Exists('$(LethalCompanyBepInExPluginsFolder)')">
