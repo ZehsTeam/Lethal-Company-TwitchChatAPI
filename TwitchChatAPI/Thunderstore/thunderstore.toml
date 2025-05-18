@@ -23,6 +23,10 @@ source = "../../artifacts/bin/TwitchChatAPI/release/TwitchChatAPI.dll"
 target = "plugins/"
 
 [[build.copy]]
+source = "../../artifacts/bin/TwitchChatAPI.Deprecated/release/com.github.zehsteam.TwitchChatAPI.dll"
+target = "plugins/"
+
+[[build.copy]]
 source = "../../CHANGELOG.md"
 target = "/"
 

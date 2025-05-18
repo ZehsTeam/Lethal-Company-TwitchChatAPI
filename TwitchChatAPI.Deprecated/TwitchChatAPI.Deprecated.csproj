@@ -46,34 +46,35 @@
     <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" PrivateAssets="all" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="UnityEngine.Modules" Version="2022.3.21" IncludeAssets="compile" PrivateAssets="all" />
-    <ProjectReference Include="../TwitchChatAPI/TwitchChatAPI.csproj" Publicize="true" />
   </ItemGroup>
   
-  <!-- EDIT THESE SETTINGS -->
+  <ItemGroup>
+    <ProjectReference Include="..\TwitchChatAPI\TwitchChatAPI.csproj" Publicize="true" />
+  </ItemGroup>
+  
   <PropertyGroup>
-    <!-- Gale profile name -->
     <GaleProfileName>Mod Development</GaleProfileName>
     
-    <!-- Gale data folder -->
     <GaleDataFolder>$(AppData)\com.kesomannen.gale</GaleDataFolder>
     
-    <!-- Plugin folder name -->
     <PluginFolderName>Zehs-TwitchChatAPI</PluginFolderName>
-
-    <!-- Gale Lethal Company plugins folder -->
+  </PropertyGroup>
+  
+  <PropertyGroup>
     <GaleLethalCompanyPluginsFolder>$(GaleDataFolder)\lethal-company\profiles\$(GaleProfileName)\BepInEx\plugins</GaleLethalCompanyPluginsFolder>
-    
-    <!-- Gale R.E.P.O. plugins folder -->
     <GaleREPOPluginsFolder>$(GaleDataFolder)\repo\profiles\$(GaleProfileName)\BepInEx\plugins</GaleREPOPluginsFolder>
   </PropertyGroup>
   
-  <!-- Copy DLL to Lethal Company -->
+  <!-- Copy DLL to Gale Lethal Company's Zehs-TwitchChatAPI plugin folder -->
   <Target Name="CopyToLethalCompanyPluginFolder" AfterTargets="PostBuildEvent" Condition="Exists('$(GaleLethalCompanyPluginsFolder)')">
     <Copy DestinationFolder="$(GaleLethalCompanyPluginsFolder)\$(PluginFolderName)" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" SourceFiles="$(TargetPath)" />
   </Target>
   
-  <!-- Copy DLL to R.E.P.O. -->
+  <!-- Copy DLL to Gale R.E.P.O.'s Zehs-TwitchChatAPI plugin folder -->
   <Target Name="CopyToREPOPluginFolder" AfterTargets="PostBuildEvent" Condition="Exists('$(GaleREPOPluginsFolder)')">
     <Copy DestinationFolder="$(GaleREPOPluginsFolder)\$(PluginFolderName)" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" SourceFiles="$(TargetPath)" />
   </Target>
+  
+  <!-- This is here to prevent build errors -->
+  <Target Name="PackThunderstore"></Target>
 </Project>
