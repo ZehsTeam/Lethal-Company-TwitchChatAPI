@@ -9,10 +9,6 @@
 
 **<ins>Who needs this mod installed for it to work?</ins> Only you!**
 
-## <img src="https://i.imgur.com/TpnrFSH.png" width="20px"> Download
-
-Download [TwitchChatAPI](https://thunderstore.io/c/lethal-company/p/Zehs/TwitchChatAPI/) on Thunderstore.
-
 ## API Usage
 
 <details><summary>Click to Expand</summary>
@@ -143,6 +139,7 @@ public class TwitchChatExample : MonoBehaviour
 |--------------------|-----------|----------|  
 | [Lethal Company Modding](https://discord.gg/XeyYqRdRGC) | `#mod-releases` | [TwitchChatAPI](https://discord.com/channels/1168655651455639582/1324949317030772838) |  
 | [Unofficial Lethal Company Community](https://discord.gg/nYcQFEpXfU) | `#mod-releases` | [TwitchChatAPI](https://discord.com/channels/1169792572382773318/1324949327453356145) |  
+| [R.E.P.O. Modding Server](https://discord.com/invite/vPJtKhYAFe) | `#released-mods` | [TwitchChatAPI](https://discord.com/channels/1344557689979670578/1373837610832629842) |  
 
 - **GitHub Issues Page:** [TwitchChatAPI](https://github.com/ZehsTeam/TwitchChatAPI/issues)
 - **My Links:** https://solo.to/crithaxxog
