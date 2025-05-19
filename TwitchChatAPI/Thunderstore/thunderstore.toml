@@ -37,5 +37,5 @@ target = "/"
 [publish]
 communities = [ "lethal-company", "repo", ]
 [publish.categories]
-lethal-company = [ "mods", "libraries", "misc", "client-side", ]
-repo = [ "mods", "libraries", "misc", "client-side", ]
+lethal-company = [ "mods", "libraries", "misc", "clientside", ]
+repo = [ "mods", "libraries", "misc", "clientside", ]
