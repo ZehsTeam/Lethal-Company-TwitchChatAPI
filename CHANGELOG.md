@@ -1,6 +1,14 @@
 # v2.0.0
 
-- 
+- Changed root namespace from `com.github.zehsteam.TwitchChatAPI` to `TwitchChatAPI`.
+- Changed plugin guid from `com.github.zehsteam.TwitchChatAPI` to `TwitchChatAPI`.
+- Removed all references to Lethal Company to make this mod work for other games.
+- Renamed `SubType` to `Type` in `TwitchSubEvent`.
+- Removed `IsPrime` bool from `TwitchSubEvent` and added `Prime` option to the `SubTier` enum.
+- Added `Channel` string to the API.
+- Added `OnConnectionStateChanged` event to the API.
+- Added `Connect`, `Connect(string channel)`, and `Disconnect()` methods to the API.
+- Added extension methods to `TwitchUser` for getting the DisplayName with color as a rich text string.
 
 ## v1.1.0
 
