@@ -106,10 +106,10 @@ internal static class UserHelper
             return false;
         }
 
-        // Must be 4–25 characters long
+        // Must be 3–25 characters long
         // Can contain uppercase/lowercase letters, numbers, underscores
         // Cannot start with an underscore
-        var regex = new Regex(@"^[A-Za-z0-9][A-Za-z0-9_]{3,24}$");
+        var regex = new Regex(@"^[A-Za-z0-9][A-Za-z0-9_]{2,24}$");
         return regex.IsMatch(username) && !username.StartsWith("_");
     }
 }

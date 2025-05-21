@@ -54,9 +54,7 @@
   
   <PropertyGroup>
     <GaleProfileName>Mod Development</GaleProfileName>
-    
     <GaleDataFolder>$(AppData)\com.kesomannen.gale</GaleDataFolder>
-    
     <PluginFolderName>Zehs-TwitchChatAPI</PluginFolderName>
   </PropertyGroup>
   
